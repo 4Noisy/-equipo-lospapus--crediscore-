@@ -36,6 +36,7 @@
 ###  Equipo de Trabajo
 * **Benjamín Garrido** — *Tech Lead*
 * **Abdiel Ortiz** — *AI / Data Engineer*
+* **Nelson Arevalo** — *AI / Data Engineer*
 * **Emilio Santibáñez** — *Product Owner*
 * **Martin Jara** — *DevSecOps*
 * **Justin Navarro** — *QA Engineer*
