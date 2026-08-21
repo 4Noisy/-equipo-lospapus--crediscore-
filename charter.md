@@ -6,6 +6,7 @@ Desarrollar una solución fintech robusta, escalable y segura para la evaluació
 ## Integrantes y Roles
 * **Benjamín Garrido — Tech Lead:** Responsable de la arquitectura técnica general, estándares de código, resolución de bloqueos técnicos y revisión de Pull Requests clave.
 * **Abdiel Ortiz — AI / Data Engineer:** Responsable del diseño, entrenamiento, evaluación y despliegue del motor de scoring crediticio y modelos de detección de fraude, asegurando métricas de *fairness*.
+* **Nelson Arevalo — AI / Data Engineer:** Responsable del diseño, entrenamiento, evaluación y despliegue del motor de scoring crediticio y modelos de detección de fraude, asegurando métricas de *fairness*.
 * **Emilio Santibáñez — Product Owner (PO):** Responsable de la priorización del backlog, refinamiento de historias de usuario, cumplimiento del alcance MVP y alineación con los requerimientos de negocio/CMF.
 * **Martin Jara — DevSecOps:** Responsable del pipeline CI/CD, infraestructura como código, seguridad en el ciclo de vida del desarrollo y monitoreo de latencia/disponibilidad.
 * **Justin Navarro — QA Engineer:** Responsable de la estrategia de pruebas automatizadas (unitarias, integración, idempotencia, carga y auditoría de datos) y control de calidad general.
