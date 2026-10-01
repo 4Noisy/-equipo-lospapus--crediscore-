@@ -236,7 +236,7 @@ export interface components {
             /** @description Puntaje de riesgo; `null` si la solicitud se bloqueó por fraude antes del scoring. */
             score: number | null;
             /** @enum {string|null} */
-            risk_band: "low" | "medium" | "medium_no_history" | "high" | null;
+            risk_category: "low" | "medium" | "medium_no_history" | "high" | null;
             /** @description Códigos de razón que explican la decisión. */
             reasons: string[];
             /** @description Versión del modelo que calculó el puntaje. */
@@ -277,7 +277,7 @@ export interface components {
             /** Format: uuid */
             event_id: string;
             /** @enum {string} */
-            event_type: "credit-application.approved" | "credit-application.rejected" | "credit-application.review-requested";
+            event_type: "partner.notified";
             event_version: string;
             /** Format: date-time */
             occurred_at: string;

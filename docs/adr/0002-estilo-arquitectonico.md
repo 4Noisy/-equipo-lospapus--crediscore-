@@ -29,7 +29,7 @@ Hemos elegido una **Arquitectura de Microservicios Orientada a Eventos (EDA)**.
 ## Alternativas descartadas
 > Enmienda del 2026-10-01: se agrega esta sección, exigida por la estructura mínima de ADR del taller. La decisión no cambia.
 
-* **Monolito modular:** es la opción natural para un equipo de 6 personas y un MVP (deploy único, transacciones ACID). Se descarta porque acopla el escalado del camino de fraude (< 500 ms) con la inferencia de ML, que tienen perfiles de carga y cadencias de release distintos. Queda como plan de repliegue: ver [ADR 0003](0003-cloud-style.md).
+* **Monolito modular:** es la opción natural para un equipo de 6 personas y un MVP (deploy único, transacciones ACID). Se descarta porque acopla el escalado del camino de fraude (< 500 ms) con la inferencia de ML, que tienen perfiles de carga y cadencias de release distintos.
 * **Serverless puro (FaaS):** se descarta porque los *cold starts* y la carga del modelo en cada arranque son incompatibles con la propagación de fraude en < 500 ms.
 
-El costo operacional de esta decisión se acota en el [ADR 0003](0003-cloud-style.md) (4 servicios sobre servicios gestionados) y la semántica de entrega e idempotencia se precisa en el [ADR 0004](0004-datos-y-eventos.md).
+El costo operacional de esta decisión se acota en el [ADR 0003](0003-cloud-style.md) (despliegue híbrido sobre servicios gestionados de AWS) y la semántica de entrega e idempotencia se precisa en el [ADR 0004](0004-datos-y-eventos.md).
