@@ -9,117 +9,82 @@ skinparam class {
   BackgroundColor #F4F8FD
   BorderColor #2E6295
   ArrowColor #555555
+  BackgroundColor<<ref>> #EEEEEE
+  BorderColor<<ref>> #888888
+  BorderStyle<<ref>> dashed
 }
 
-title DER — contexto Originación y Scoring (schema ""origination"", PostgreSQL 16)
+title DER — contexto Scoring & Riesgo Crediticio (Aurora PostgreSQL)
 
-entity partner {
-  * id : uuid <<PK>>
+entity "Applicant (ref)" as Applicant <<ref>> {
+  * applicant_id : uuid <<PK>>
   --
-  * name : text
-  * client_id : text <<UK>>
-  * rate_limit_per_min : int
+  * rut_hash : text
+  * kyc_status : text
+}
+
+entity CreditApplication {
+  * application_id : uuid <<PK>>
+  --
+  * applicant_id : uuid <<FK>>
+  * requested_amount : int
+  * channel : text
   * status : text
-  * created_at : timestamptz
+  * submitted_at : timestamptz
 }
 
-entity credit_application {
-  * id : uuid <<PK>>
-  --
-  * partner_id : uuid <<FK>>
-  * applicant_id : uuid
-  * identity_verification_id : uuid
-  * amount : int
-  * term_months : int
-  * status : text
-  partner_reference : text
-  * created_at : timestamptz
-  * updated_at : timestamptz
-}
-
-entity idempotency_key {
-  * partner_id : uuid <<PK, FK>>
-  * key : uuid <<PK>>
-  --
-  * request_hash : text
-  * response_status : int
-  * response_body : jsonb
-  application_id : uuid <<FK>>
-  * expires_at : timestamptz
-}
-
-entity bureau_report {
-  * id : uuid <<PK>>
+entity ScoringResult {
+  * scoring_id : uuid <<PK>>
   --
   * application_id : uuid <<FK>>
-  * has_history : boolean
-  * payload : jsonb
-  * fetched_at : timestamptz
-}
-
-entity model_version {
-  * id : uuid <<PK>>
-  --
-  * name : text
-  * version : text
-  * artifact_uri : text
-  * fairness_report_uri : text
-  * deployed_at : timestamptz
-}
-
-entity score_result {
-  * id : uuid <<PK>>
-  --
-  * application_id : uuid <<FK>>
-  * model_version_id : uuid <<FK>>
   * score : int
-  * risk_band : text
-  * reasons : jsonb
+  * risk_category : text
+  * model_version : text
   * computed_at : timestamptz
 }
 
-entity decision {
-  * id : uuid <<PK>>
+entity FinancialProfile {
+  * profile_id : uuid <<PK>>
   --
   * application_id : uuid <<FK>>
-  score_result_id : uuid <<FK>>
-  * outcome : text
+  * monthly_income : int
+  * existing_debt : int
+  * employment_type : text
+}
+
+entity DecisionRecord {
+  * decision_id : uuid <<PK>>
+  --
+  * application_id : uuid <<FK>>
+  * decision : text
   * decided_by : text
-  analyst_id : uuid
-  justification : text
   * decided_at : timestamptz
 }
 
-entity outbox_event {
-  * event_id : uuid <<PK>>
+entity ManualReview {
+  * review_id : uuid <<PK>>
   --
-  * aggregate_id : uuid
-  * event_type : text
-  * event_version : text
-  * payload : jsonb
-  * trace_id : text
-  * occurred_at : timestamptz
-  published_at : timestamptz
+  * decision_id : uuid <<FK>>
+  * analyst_id : uuid <<FK>>
+  * outcome : text
+  notes : text
 }
 
-partner ||--o{ credit_application : origina
-partner ||--o{ idempotency_key : usa
-credit_application |o--o| idempotency_key : creada con
-credit_application ||--o| bureau_report : consulta
-credit_application ||--o{ score_result : obtiene
-model_version ||--o{ score_result : calcula
-credit_application ||--o{ decision : recibe
-score_result |o--o{ decision : respalda
-credit_application ||..o{ outbox_event : emite
+entity "RiskAnalyst (ref)" as RiskAnalyst <<ref>> {
+  * analyst_id : uuid <<PK>>
+  --
+  * name : text
+}
 
-note bottom of credit_application
-  ""applicant_id"" e ""identity_verification_id"" son referencias
-  al contexto Identidad: sin FK entre schemas.
-  No se guarda género ni comuna (fairness).
-end note
+Applicant ||--o{ CreditApplication : solicita
+CreditApplication ||--o{ ScoringResult : obtiene
+CreditApplication ||--|| FinancialProfile : declara
+CreditApplication ||--|| DecisionRecord : recibe
+DecisionRecord ||--o| ManualReview : se revisa en
+RiskAnalyst ||--o{ ManualReview : realiza
 
-note bottom of decision
-  Solo INSERT: una re-evaluación agrega una fila
-  (""decided_by = analyst""), nunca modifica la anterior.
+note bottom of Applicant
+  Applicant y RiskAnalyst son referencias a los
+  contextos Identidad / Onboarding.
 end note
 @enduml

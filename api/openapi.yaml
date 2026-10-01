@@ -196,7 +196,7 @@ paths:
                     application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
                     outcome: review
                     score: 540
-                    risk_band: medium_no_history
+                    risk_category: medium_no_history
                     reasons: [NO_CREDIT_HISTORY, INCOME_PROOF_REQUIRED]
                     model_version: scoring-xgb-1.3.0
                     decided_by: model
@@ -250,7 +250,7 @@ paths:
                     application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
                     outcome: approved
                     score: 540
-                    risk_band: medium_no_history
+                    risk_category: medium_no_history
                     reasons: [MANUAL_REVIEW_APPROVED]
                     model_version: scoring-xgb-1.3.0
                     decided_by: analyst
@@ -370,7 +370,7 @@ webhooks:
                 summary: Solicitud aprobada por el modelo
                 value:
                   event_id: 3d6f0a52-8c1b-4f7e-a2d9-0e1f2a3b4c5d
-                  event_type: credit-application.approved
+                  event_type: partner.notified
                   event_version: '1.0'
                   occurred_at: '2026-10-01T14:22:58Z'
                   trace_id: c8f2b1a09d3e4f5a
@@ -378,7 +378,7 @@ webhooks:
                     application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
                     outcome: approved
                     score: 812
-                    risk_band: low
+                    risk_category: low
                     reasons: [STABLE_INCOME, NO_DELINQUENCY]
                     model_version: scoring-xgb-1.3.0
                     decided_by: model
@@ -544,7 +544,7 @@ components:
           description: Cursor de la página siguiente; `null` si no hay más resultados.
     Decision:
       type: object
-      required: [application_id, outcome, score, risk_band, reasons, model_version, decided_by, decided_at]
+      required: [application_id, outcome, score, risk_category, reasons, model_version, decided_by, decided_at]
       properties:
         application_id:
           type: string
@@ -557,7 +557,7 @@ components:
           description: Puntaje de riesgo; `null` si la solicitud se bloqueó por fraude antes del scoring.
           minimum: 0
           maximum: 1000
-        risk_band:
+        risk_category:
           type: [string, 'null']
           enum: [low, medium, medium_no_history, high, null]
         reasons:
@@ -633,9 +633,7 @@ components:
         event_type:
           type: string
           enum:
-            - credit-application.approved
-            - credit-application.rejected
-            - credit-application.review-requested
+            - partner.notified
         event_version:
           type: string
         occurred_at:
@@ -686,7 +684,7 @@ components:
         application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
         outcome: approved
         score: 812
-        risk_band: low
+        risk_category: low
         reasons: [STABLE_INCOME, NO_DELINQUENCY]
         model_version: scoring-xgb-1.3.0
         decided_by: model
