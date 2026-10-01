@@ -1,0 +1,832 @@
+openapi: 3.1.0
+info:
+  title: CrediScore API
+  version: 1.0.0
+  summary: API pública de originación y scoring de microcréditos.
+  description: |
+    Contrato *contract-first* de CrediScore. Lo consumen los partners comerciales (HU5),
+    la web y la app del solicitante (HU1, HU2) y el backoffice de analistas (HU4).
+
+    Convenciones:
+    - **Idempotencia:** todo `POST` exige el header `Idempotency-Key` (UUID). La respuesta se
+      conserva 24 h; un reintento con la misma clave y el mismo cuerpo devuelve la respuesta
+      original con `Idempotent-Replayed: true`. La misma clave con otro cuerpo devuelve `409`.
+    - **Errores:** formato RFC 7807 (`application/problem+json`) con `trace_id`.
+    - **Asincronía:** la decisión de crédito llega en < 60 s (p95). El `POST` responde de
+      inmediato con la solicitud en estado `received`; el resultado se consulta en
+      `/credit-applications/{applicationId}/decision` o se recibe por webhook.
+    - **Fairness:** la API no acepta género ni comuna; el modelo no los usa.
+    - **Versionado:** ver `docs/api/versioning-policy.md`.
+  contact:
+    name: Equipo CrediScore
+    url: https://github.com/4Noisy/-equipo-lospapus--crediscore-
+servers:
+  - url: https://api.crediscore.cl/v1
+    description: Producción
+  - url: https://api.staging.crediscore.cl/v1
+    description: Staging
+  - url: http://localhost:4010
+    description: Mock local con Prism
+tags:
+  - name: Credit Applications
+    description: Solicitudes de microcrédito, su decisión y la re-evaluación humana.
+  - name: Identity Verifications
+    description: Verificación de identidad (KYC) previa a la solicitud.
+paths:
+  /credit-applications:
+    post:
+      tags: [Credit Applications]
+      operationId: createCreditApplication
+      summary: Crear solicitud de crédito
+      description: |
+        Registra la solicitud y dispara la evaluación de fraude y el scoring de forma asíncrona.
+        Es idempotente por `Idempotency-Key`.
+      security:
+        - oauth2: [applications:write]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditApplicationInput'
+            examples:
+              microcredito:
+                summary: Microcrédito de $250.000 a 12 meses
+                value:
+                  rut: 12345678-5
+                  amount: 250000
+                  term_months: 12
+                  identity_verification_id: 0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e
+                  partner_reference: ORD-2026-000184
+      responses:
+        '201':
+          description: Solicitud creada, o respuesta original de un reintento idempotente.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditApplication'
+              examples:
+                recibida:
+                  $ref: '#/components/examples/CreditApplicationReceived'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    get:
+      tags: [Credit Applications]
+      operationId: listCreditApplications
+      summary: Listar solicitudes de crédito
+      description: Lista las solicitudes del partner autenticado, de la más reciente a la más antigua, con paginación por cursor.
+      security:
+        - oauth2: [applications:read]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          description: Filtra por estado de la solicitud.
+          schema:
+            $ref: '#/components/schemas/ApplicationStatus'
+        - name: created_at.gte
+          in: query
+          description: Solo solicitudes creadas en esta fecha y hora o después.
+          schema:
+            type: string
+            format: date-time
+          example: '2026-10-01T00:00:00Z'
+      responses:
+        '200':
+          description: Página de solicitudes.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditApplicationPage'
+              examples:
+                pagina:
+                  summary: Primera página con una solicitud
+                  value:
+                    data:
+                      - id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+                        status: approved
+                        rut: 12345678-5
+                        amount: 250000
+                        term_months: 12
+                        identity_verification_id: 0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e
+                        partner_reference: ORD-2026-000184
+                        created_at: '2026-10-01T14:22:31Z'
+                        updated_at: '2026-10-01T14:22:58Z'
+                    next_cursor: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /credit-applications/{applicationId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [Credit Applications]
+      operationId: getCreditApplication
+      summary: Obtener una solicitud de crédito
+      description: Devuelve el estado actual de la solicitud.
+      security:
+        - oauth2: [applications:read]
+      responses:
+        '200':
+          description: Solicitud encontrada.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditApplication'
+              examples:
+                recibida:
+                  $ref: '#/components/examples/CreditApplicationReceived'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /credit-applications/{applicationId}/decision:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [Credit Applications]
+      operationId: getCreditApplicationDecision
+      summary: Obtener la decisión de una solicitud
+      description: |
+        Devuelve el puntaje, la decisión y los códigos de razón que la explican.
+        Responde `404` mientras la solicitud aún no tiene decisión.
+      security:
+        - oauth2: [applications:read]
+      responses:
+        '200':
+          description: Decisión disponible.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision'
+              examples:
+                aprobada:
+                  $ref: '#/components/examples/DecisionApproved'
+                sinHistorial:
+                  summary: Solicitante sin historial, enviada a revisión
+                  value:
+                    application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+                    outcome: review
+                    score: 540
+                    risk_band: medium_no_history
+                    reasons: [NO_CREDIT_HISTORY, INCOME_PROOF_REQUIRED]
+                    model_version: scoring-xgb-1.3.0
+                    decided_by: model
+                    decided_at: '2026-10-01T14:22:58Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /credit-applications/{applicationId}/reevaluations:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [Credit Applications]
+      operationId: createReevaluation
+      summary: Re-evaluar una solicitud en revisión
+      description: |
+        Decisión humana (*human-in-the-loop*) sobre una solicitud en estado `in_review`.
+        Solo analistas de riesgo. La justificación queda en el log de auditoría.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReevaluationInput'
+            examples:
+              aprobar:
+                summary: El analista aprueba tras revisar el comprobante de ingresos
+                value:
+                  outcome: approved
+                  justification: Comprobante de ingresos validado; carga financiera bajo el límite normativo.
+      responses:
+        '201':
+          description: Re-evaluación registrada; devuelve la nueva decisión.
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision'
+              examples:
+                reevaluada:
+                  summary: Decisión tomada por un analista
+                  value:
+                    application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+                    outcome: approved
+                    score: 540
+                    risk_band: medium_no_history
+                    reasons: [MANUAL_REVIEW_APPROVED]
+                    model_version: scoring-xgb-1.3.0
+                    decided_by: analyst
+                    decided_at: '2026-10-01T15:10:04Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /identity-verifications:
+    post:
+      tags: [Identity Verifications]
+      operationId: createIdentityVerification
+      summary: Iniciar verificación de identidad
+      description: |
+        Envía la cédula y la fotografía al proveedor KYC. Las imágenes no se almacenan en CrediScore.
+        Si el proveedor no está disponible, la verificación queda en `pending` y se reintenta.
+      security:
+        - oauth2: [identity:write]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityVerificationInput'
+            examples:
+              cedula:
+                summary: Cédula y selfie en base64 (recortadas en el ejemplo)
+                value:
+                  rut: 12345678-5
+                  document_image: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk
+                  selfie_image: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8
+      responses:
+        '201':
+          description: Verificación creada.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityVerification'
+              examples:
+                verificada:
+                  $ref: '#/components/examples/IdentityVerified'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /identity-verifications/{verificationId}:
+    parameters:
+      - name: verificationId
+        in: path
+        required: true
+        description: Identificador de la verificación de identidad.
+        schema:
+          type: string
+          format: uuid
+        example: 0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e
+    get:
+      tags: [Identity Verifications]
+      operationId: getIdentityVerification
+      summary: Obtener una verificación de identidad
+      description: Devuelve el estado de la verificación.
+      security:
+        - oauth2: [identity:read]
+      responses:
+        '200':
+          description: Verificación encontrada.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityVerification'
+              examples:
+                verificada:
+                  $ref: '#/components/examples/IdentityVerified'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+webhooks:
+  creditApplicationDecided:
+    post:
+      tags: [Credit Applications]
+      operationId: onCreditApplicationDecided
+      summary: Aviso de decisión tomada
+      description: |
+        CrediScore lo envía a la URL registrada por el partner cuando una solicitud queda
+        aprobada, rechazada o en revisión. La entrega es *at-least-once*: el receptor debe
+        ser idempotente por `event_id`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditApplicationDecidedEvent'
+            examples:
+              aprobada:
+                summary: Solicitud aprobada por el modelo
+                value:
+                  event_id: 3d6f0a52-8c1b-4f7e-a2d9-0e1f2a3b4c5d
+                  event_type: credit-application.approved
+                  event_version: '1.0'
+                  occurred_at: '2026-10-01T14:22:58Z'
+                  trace_id: c8f2b1a09d3e4f5a
+                  data:
+                    application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+                    outcome: approved
+                    score: 812
+                    risk_band: low
+                    reasons: [STABLE_INCOME, NO_DELINQUENCY]
+                    model_version: scoring-xgb-1.3.0
+                    decided_by: model
+                    decided_at: '2026-10-01T14:22:58Z'
+      responses:
+        '204':
+          description: Aviso recibido.
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Partners y canales propios. OAuth2 *client credentials*; en producción se exige además mTLS.
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.crediscore.cl/oauth2/token
+          scopes:
+            applications:write: Crear solicitudes de crédito.
+            applications:read: Consultar solicitudes y decisiones.
+            identity:write: Iniciar verificaciones de identidad.
+            identity:read: Consultar verificaciones de identidad.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Sesión de analista de riesgo emitida por el proveedor de identidad interno.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Clave única por operación. Reintentar con la misma clave no duplica el recurso.
+      schema:
+        type: string
+        format: uuid
+      example: 9c4a1f0e-3b2d-4c5e-8f7a-6b5c4d3e2f1a
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      description: Identificador de la solicitud de crédito.
+      schema:
+        type: string
+        format: uuid
+      example: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+    Cursor:
+      name: cursor
+      in: query
+      description: Cursor opaco devuelto en `next_cursor` por la página anterior.
+      schema:
+        type: string
+      example: eyJpZCI6IjdmM2I2YzFlIn0
+    Limit:
+      name: limit
+      in: query
+      description: Tamaño máximo de la página.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+  headers:
+    Location:
+      description: URL del recurso creado.
+      schema:
+        type: string
+        format: uri-reference
+    IdempotentReplayed:
+      description: '`true` cuando la respuesta proviene de un reintento con una clave ya procesada.'
+      schema:
+        type: boolean
+    XTraceId:
+      description: Identificador de traza para correlacionar la petición con logs y eventos.
+      schema:
+        type: string
+    XRateLimitRemaining:
+      description: Peticiones restantes en la ventana actual (100 por minuto por partner).
+      schema:
+        type: integer
+        minimum: 0
+    RetryAfter:
+      description: Segundos que hay que esperar antes de reintentar.
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    Rut:
+      type: string
+      description: RUT chileno sin puntos, con guion y dígito verificador.
+      pattern: '^\d{7,8}-[0-9K]$'
+      examples: [12345678-5]
+    ApplicationStatus:
+      type: string
+      description: |
+        Estado de la solicitud. `received` → `fraud_check` → `scoring` → `approved`, `rejected` o
+        `in_review`. `blocked` indica una alerta de fraude.
+      enum: [received, fraud_check, scoring, approved, rejected, in_review, blocked]
+    CreditApplicationInput:
+      type: object
+      additionalProperties: false
+      required: [rut, amount, term_months, identity_verification_id]
+      properties:
+        rut:
+          $ref: '#/components/schemas/Rut'
+        amount:
+          type: integer
+          description: Monto solicitado en pesos chilenos.
+          minimum: 50000
+          maximum: 5000000
+        term_months:
+          type: integer
+          description: Plazo en meses.
+          minimum: 1
+          maximum: 36
+        identity_verification_id:
+          type: string
+          format: uuid
+          description: Verificación de identidad aprobada del solicitante.
+        partner_reference:
+          type: string
+          description: Identificador de la operación en el sistema del partner.
+          maxLength: 64
+    CreditApplication:
+      type: object
+      required: [id, status, rut, amount, term_months, identity_verification_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        rut:
+          $ref: '#/components/schemas/Rut'
+        amount:
+          type: integer
+          minimum: 50000
+          maximum: 5000000
+        term_months:
+          type: integer
+          minimum: 1
+          maximum: 36
+        identity_verification_id:
+          type: string
+          format: uuid
+        partner_reference:
+          type: string
+          maxLength: 64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreditApplicationPage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditApplication'
+        next_cursor:
+          type: [string, 'null']
+          description: Cursor de la página siguiente; `null` si no hay más resultados.
+    Decision:
+      type: object
+      required: [application_id, outcome, score, risk_band, reasons, model_version, decided_by, decided_at]
+      properties:
+        application_id:
+          type: string
+          format: uuid
+        outcome:
+          type: string
+          enum: [approved, rejected, review]
+        score:
+          type: [integer, 'null']
+          description: Puntaje de riesgo; `null` si la solicitud se bloqueó por fraude antes del scoring.
+          minimum: 0
+          maximum: 1000
+        risk_band:
+          type: [string, 'null']
+          enum: [low, medium, medium_no_history, high, null]
+        reasons:
+          type: array
+          description: Códigos de razón que explican la decisión.
+          items:
+            type: string
+        model_version:
+          type: [string, 'null']
+          description: Versión del modelo que calculó el puntaje.
+        decided_by:
+          type: string
+          enum: [model, analyst]
+        decided_at:
+          type: string
+          format: date-time
+    ReevaluationInput:
+      type: object
+      additionalProperties: false
+      required: [outcome, justification]
+      properties:
+        outcome:
+          type: string
+          enum: [approved, rejected]
+        justification:
+          type: string
+          description: Motivo de la decisión; se guarda en el log de auditoría.
+          minLength: 20
+          maxLength: 1000
+    IdentityVerificationInput:
+      type: object
+      additionalProperties: false
+      required: [rut, document_image, selfie_image]
+      properties:
+        rut:
+          $ref: '#/components/schemas/Rut'
+        document_image:
+          type: string
+          description: Imagen del frente de la cédula.
+          contentEncoding: base64
+          contentMediaType: image/png
+        selfie_image:
+          type: string
+          description: Fotografía del solicitante.
+          contentEncoding: base64
+          contentMediaType: image/png
+    IdentityVerification:
+      type: object
+      required: [id, status, rut, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: '`retry_required` pide capturar de nuevo un documento ilegible o vencido.'
+          enum: [pending, verified, rejected, retry_required]
+        rut:
+          $ref: '#/components/schemas/Rut'
+        created_at:
+          type: string
+          format: date-time
+        verified_at:
+          type: [string, 'null']
+          format: date-time
+    CreditApplicationDecidedEvent:
+      type: object
+      required: [event_id, event_type, event_version, occurred_at, trace_id, data]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - credit-application.approved
+            - credit-application.rejected
+            - credit-application.review-requested
+        event_version:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        trace_id:
+          type: string
+        data:
+          $ref: '#/components/schemas/Decision'
+    Problem:
+      type: object
+      description: Error en formato RFC 7807.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI que identifica el tipo de error.
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        trace_id:
+          type: string
+  examples:
+    CreditApplicationReceived:
+      summary: Solicitud recién recibida
+      value:
+        id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+        status: received
+        rut: 12345678-5
+        amount: 250000
+        term_months: 12
+        identity_verification_id: 0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e
+        partner_reference: ORD-2026-000184
+        created_at: '2026-10-01T14:22:31Z'
+        updated_at: '2026-10-01T14:22:31Z'
+    DecisionApproved:
+      summary: Solicitud de bajo riesgo aprobada por el modelo
+      value:
+        application_id: 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+        outcome: approved
+        score: 812
+        risk_band: low
+        reasons: [STABLE_INCOME, NO_DELINQUENCY]
+        model_version: scoring-xgb-1.3.0
+        decided_by: model
+        decided_at: '2026-10-01T14:22:58Z'
+    IdentityVerified:
+      summary: Identidad confirmada
+      value:
+        id: 0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e
+        status: verified
+        rut: 12345678-5
+        created_at: '2026-10-01T14:20:02Z'
+        verified_at: '2026-10-01T14:20:07Z'
+  responses:
+    Unauthorized:
+      description: Token ausente, expirado o inválido. No se registra ninguna operación.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            tokenExpirado:
+              summary: Token expirado
+              value:
+                type: https://api.crediscore.cl/errors/unauthorized
+                title: Unauthorized
+                status: 401
+                detail: El token de acceso expiró.
+                trace_id: c8f2b1a09d3e4f5a
+    Forbidden:
+      description: El token es válido pero no tiene permiso para esta operación.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            sinRol:
+              summary: El usuario no es analista de riesgo
+              value:
+                type: https://api.crediscore.cl/errors/forbidden
+                title: Forbidden
+                status: 403
+                detail: Solo un analista de riesgo puede re-evaluar solicitudes.
+                trace_id: c8f2b1a09d3e4f5a
+    NotFound:
+      description: El recurso no existe o todavía no está disponible.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            noExiste:
+              summary: Solicitud inexistente
+              value:
+                type: https://api.crediscore.cl/errors/not-found
+                title: Not Found
+                status: 404
+                detail: No existe una solicitud con ese identificador.
+                instance: /v1/credit-applications/7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+                trace_id: c8f2b1a09d3e4f5a
+    IdempotencyConflict:
+      description: La `Idempotency-Key` ya se usó con un cuerpo distinto.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            claveReutilizada:
+              summary: Misma clave, cuerpo distinto
+              value:
+                type: https://api.crediscore.cl/errors/idempotency-key-reused
+                title: Idempotency key reused
+                status: 409
+                detail: La clave ya fue usada con un cuerpo distinto. Genere una clave nueva.
+                trace_id: c8f2b1a09d3e4f5a
+    StateConflict:
+      description: La solicitud no está en un estado que permita la operación.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            noEnRevision:
+              summary: La solicitud no está en revisión
+              value:
+                type: https://api.crediscore.cl/errors/invalid-state
+                title: Invalid state
+                status: 409
+                detail: Solo se puede re-evaluar una solicitud en estado in_review.
+                trace_id: c8f2b1a09d3e4f5a
+    ValidationError:
+      description: El cuerpo no cumple el contrato o una regla de negocio.
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            montoFueraDeRango:
+              summary: Monto bajo el mínimo
+              value:
+                type: https://api.crediscore.cl/errors/validation
+                title: Validation error
+                status: 422
+                detail: amount debe estar entre 50000 y 5000000.
+                instance: /v1/credit-applications
+                trace_id: c8f2b1a09d3e4f5a
+    RateLimited:
+      description: Se superó el límite de 100 peticiones por minuto del partner.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            limiteSuperado:
+              summary: Límite por partner superado
+              value:
+                type: https://api.crediscore.cl/errors/rate-limited
+                title: Too Many Requests
+                status: 429
+                detail: Límite de 100 peticiones por minuto superado.
+                trace_id: c8f2b1a09d3e4f5a
