@@ -1,7 +1,7 @@
 # ADR 0001: Elección de Iniciativa — CrediScore
 
-* **Fecha:** 2026-03-23
-* **Autores:** Benjamín Garrido, Abdiel Ortiz, Emilio Santibáñez, Martin Jara, Justin Navarro
+* **Fecha:** 2026-08-20
+* **Autores:** Benjamín Garrido, Abdiel Ortiz, Nelson Arevalo, Emilio Santibáñez, Martin Jara, Justin Navarro
 * **Estado:** Aceptado
 
 ## Contexto

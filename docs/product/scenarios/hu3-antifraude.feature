@@ -6,8 +6,8 @@ Feature: HU3 — Antifraude
   Scenario: Detección y bloqueo en tiempo real de anomalía (Camino feliz)
     Given una solicitud ingresada desde una IP fuera del país con datos de un tercero
     When el motor antifraude analiza la transacción
-    Then se bloquea la solicitud de inmediato
-    And se envía una alerta prioritaria al oficial de fraude
+    Then se bloquea la solicitud
+    And la alerta prioritaria llega al oficial de fraude en menos de 500 ms
 
   Scenario: Intentos repetidos desde el mismo dispositivo (Caso borde)
     Given un dispositivo que ha generado 3 solicitudes distintas en menos de 1 hora

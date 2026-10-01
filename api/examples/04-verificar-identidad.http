@@ -1,0 +1,26 @@
+### Iniciar la verificación de identidad (HU1) -> 201
+@baseUrl = http://localhost:4010
+@token = test-token
+
+POST {{baseUrl}}/identity-verifications
+Authorization: Bearer {{token}}
+Idempotency-Key: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+Content-Type: application/json
+
+{
+  "rut": "12345678-5",
+  "document_image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk",
+  "selfie_image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
+}
+
+### Token inválido -> 401 (HU5, caso de error)
+POST {{baseUrl}}/identity-verifications
+Idempotency-Key: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+Content-Type: application/json
+Prefer: code=401
+
+{
+  "rut": "12345678-5",
+  "document_image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk",
+  "selfie_image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
+}

@@ -1,0 +1,65 @@
+extends: ["spectral:oas"]
+rules:
+  # Las advertencias del ruleset base que el equipo trata como error.
+  operation-description: error
+  operation-operationId: error
+  operation-tags: error
+  oas3-valid-media-example: error
+  oas3-valid-schema-example: error
+
+  crediscore-paths-kebab-case:
+    description: Los paths usan recursos en kebab-case; los parámetros van en camelCase.
+    message: "{{property}} no cumple kebab-case."
+    severity: error
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        match: '^(\/[a-z0-9]+(-[a-z0-9]+)*|\/\{[a-z][a-zA-Z0-9]*\})+$'
+
+  crediscore-post-idempotency-key:
+    description: Todo POST exige el header Idempotency-Key.
+    message: Falta el parámetro de header Idempotency-Key.
+    severity: error
+    given: $.paths[*].post
+    then:
+      field: parameters
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            type: object
+            required: [name, in, required]
+            properties:
+              name: { const: Idempotency-Key }
+              in: { const: header }
+              required: { const: true }
+
+  crediscore-errors-problem-json:
+    description: Los errores 4xx y 5xx responden application/problem+json (RFC 7807).
+    message: La respuesta de error debe usar application/problem+json.
+    severity: error
+    given: $.paths[*][*].responses[?(@property.match(/^[45]/))].content
+    then:
+      field: application/problem+json
+      function: truthy
+
+  crediscore-properties-snake-case:
+    description: Las propiedades de los schemas usan snake_case.
+    message: "{{property}} no está en snake_case."
+    severity: error
+    given: $.components.schemas..properties[*]~
+    then:
+      function: pattern
+      functionOptions:
+        match: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'
+
+  crediscore-operation-security:
+    description: Toda operación declara su esquema de seguridad.
+    message: La operación no declara security.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: security
+      function: truthy

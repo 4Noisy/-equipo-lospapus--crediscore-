@@ -1,0 +1,20 @@
+{
+  "name": "@crediscore/api-client",
+  "version": "1.0.0",
+  "description": "Cliente TypeScript de la API de CrediScore, generado desde api/openapi.yaml.",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "openapi-typescript ../../api/openapi.yaml -o src/schema.d.ts",
+    "typecheck": "tsc --noEmit --strict --module nodenext --moduleResolution nodenext --skipLibCheck src/index.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.6.0"
+  }
+}

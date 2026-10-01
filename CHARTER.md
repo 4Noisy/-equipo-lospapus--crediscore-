@@ -19,6 +19,7 @@ Desarrollar una solución fintech robusta, escalable y segura para la evaluació
 ## Política de Uso de Inteligencia Artificial (IA)
 * **Permitido y fomentado:** Asistencia en generación de boilerplate, documentación, optimización de algoritmos, refactorización y creación de casos de prueba unitarios.
 * **Restricción y control:** Todo código o configuración generada por IA debe ser completamente comprendido, validado y probado por el autor del PR antes de ser subido. Queda prohibido el copiado directo sin análisis de seguridad o cumplimiento de requisitos.
+* **Declaración y auditoría:** Toda contribución asistida por IA se declara en el mensaje del commit (trailer `Co-Authored-By:` con el nombre del asistente) y se audita en la revisión del PR.
 
 ## Definition of Done (DoD) Preliminar
 Una tarea o historia de usuario se considera terminada si:

@@ -1,0 +1,17 @@
+### Crear una solicitud de crédito (HU5, camino feliz) -> 201
+# Ejecutable contra el mock: npx @stoplight/prism-cli mock api/openapi.yaml
+@baseUrl = http://localhost:4010
+@token = test-token
+
+POST {{baseUrl}}/credit-applications
+Authorization: Bearer {{token}}
+Idempotency-Key: 9c4a1f0e-3b2d-4c5e-8f7a-6b5c4d3e2f1a
+Content-Type: application/json
+
+{
+  "rut": "12345678-5",
+  "amount": 250000,
+  "term_months": 12,
+  "identity_verification_id": "0b9d2f4a-6c1e-4a7b-8d3f-5e6a7b8c9d0e",
+  "partner_reference": "ORD-2026-000184"
+}

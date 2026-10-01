@@ -1,0 +1,23 @@
+### Consultar la decisión de una solicitud (HU2) -> 200
+@baseUrl = http://localhost:4010
+@token = test-token
+@applicationId = 7f3b6c1e-2a4d-4e8b-9c0f-1d2e3f4a5b6c
+
+GET {{baseUrl}}/credit-applications/{{applicationId}}/decision
+Authorization: Bearer {{token}}
+
+### Solicitante sin historial: queda en revisión (HU2, caso borde)
+GET {{baseUrl}}/credit-applications/{{applicationId}}/decision
+Authorization: Bearer {{token}}
+Prefer: example=sinHistorial
+
+### El analista re-evalúa la solicitud en revisión (HU4) -> 201
+POST {{baseUrl}}/credit-applications/{{applicationId}}/reevaluations
+Authorization: Bearer {{token}}
+Idempotency-Key: 4e1d7c2b-9a8f-4b6c-8d5e-3f2a1b0c9d8e
+Content-Type: application/json
+
+{
+  "outcome": "approved",
+  "justification": "Comprobante de ingresos validado; carga financiera bajo el límite normativo."
+}
