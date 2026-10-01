@@ -1,0 +1,125 @@
+@startuml der
+' Render: java -jar plantuml.jar -tpng docs/data/der.puml
+!pragma layout smetana
+hide circle
+hide methods
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam class {
+  BackgroundColor #F4F8FD
+  BorderColor #2E6295
+  ArrowColor #555555
+}
+
+title DER — contexto Originación y Scoring (schema ""origination"", PostgreSQL 16)
+
+entity partner {
+  * id : uuid <<PK>>
+  --
+  * name : text
+  * client_id : text <<UK>>
+  * rate_limit_per_min : int
+  * status : text
+  * created_at : timestamptz
+}
+
+entity credit_application {
+  * id : uuid <<PK>>
+  --
+  * partner_id : uuid <<FK>>
+  * applicant_id : uuid
+  * identity_verification_id : uuid
+  * amount : int
+  * term_months : int
+  * status : text
+  partner_reference : text
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity idempotency_key {
+  * partner_id : uuid <<PK, FK>>
+  * key : uuid <<PK>>
+  --
+  * request_hash : text
+  * response_status : int
+  * response_body : jsonb
+  application_id : uuid <<FK>>
+  * expires_at : timestamptz
+}
+
+entity bureau_report {
+  * id : uuid <<PK>>
+  --
+  * application_id : uuid <<FK>>
+  * has_history : boolean
+  * payload : jsonb
+  * fetched_at : timestamptz
+}
+
+entity model_version {
+  * id : uuid <<PK>>
+  --
+  * name : text
+  * version : text
+  * artifact_uri : text
+  * fairness_report_uri : text
+  * deployed_at : timestamptz
+}
+
+entity score_result {
+  * id : uuid <<PK>>
+  --
+  * application_id : uuid <<FK>>
+  * model_version_id : uuid <<FK>>
+  * score : int
+  * risk_band : text
+  * reasons : jsonb
+  * computed_at : timestamptz
+}
+
+entity decision {
+  * id : uuid <<PK>>
+  --
+  * application_id : uuid <<FK>>
+  score_result_id : uuid <<FK>>
+  * outcome : text
+  * decided_by : text
+  analyst_id : uuid
+  justification : text
+  * decided_at : timestamptz
+}
+
+entity outbox_event {
+  * event_id : uuid <<PK>>
+  --
+  * aggregate_id : uuid
+  * event_type : text
+  * event_version : text
+  * payload : jsonb
+  * trace_id : text
+  * occurred_at : timestamptz
+  published_at : timestamptz
+}
+
+partner ||--o{ credit_application : origina
+partner ||--o{ idempotency_key : usa
+credit_application |o--o| idempotency_key : creada con
+credit_application ||--o| bureau_report : consulta
+credit_application ||--o{ score_result : obtiene
+model_version ||--o{ score_result : calcula
+credit_application ||--o{ decision : recibe
+score_result |o--o{ decision : respalda
+credit_application ||..o{ outbox_event : emite
+
+note bottom of credit_application
+  ""applicant_id"" e ""identity_verification_id"" son referencias
+  al contexto Identidad: sin FK entre schemas.
+  No se guarda género ni comuna (fairness).
+end note
+
+note bottom of decision
+  Solo INSERT: una re-evaluación agrega una fila
+  (""decided_by = analyst""), nunca modifica la anterior.
+end note
+@enduml
