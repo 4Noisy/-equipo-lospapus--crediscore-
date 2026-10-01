@@ -40,3 +40,33 @@
 * **Emilio Santibáñez** — *Product Owner*
 * **Martin Jara** — *DevSecOps*
 * **Justin Navarro** — *QA Engineer*
+
+Reglas de trabajo, Definition of Done y política de IA: [CHARTER.md](CHARTER.md).
+
+---
+
+###  Documentación por sesión
+| Sesión | Entregables |
+| :--- | :--- |
+| **S01** — Charter | [CHARTER.md](CHARTER.md) · [ADR 0001](docs/adr/0001-eleccion-iniciativa.md) |
+| **S02** — Requisitos | [Backlog](docs/product/backlog.md) · [Impact map](docs/product/impact-map.md) · [Escenarios Gherkin](docs/product/scenarios/) |
+| **S03** — Arquitectura y C4 | [C4 L1](docs/c4/l1-context.png) · [C4 L2](docs/c4/l2-container.png) · [ADR 0002](docs/adr/0002-estilo-arquitectonico.md) · [Atributos de calidad](docs/arch/atributos-calidad.md) · [Trazabilidad backlog → contenedor](docs/arch/trazabilidad-backlog-contenedor.md) |
+| **S04** — Cloud y 12-Factor | [Checklist 12-Factor](docs/12-factor-checklist.md) · [ADR 0003](docs/adr/0003-cloud-style.md) · [Servicios gestionados](docs/arch/managed-services.md) |
+| **S05** — APIs y OpenAPI | [Contrato OpenAPI 3.1](api/openapi.yaml) · [Reglas Spectral](.spectral.yaml) · [Ejemplos](api/examples/) · [Política de versionado](docs/api/versioning-policy.md) · [Cliente TypeScript](packages/api-client/) |
+| **S06** — Datos y eventos | [DER](docs/data/der.png) · [Catálogo de eventos](docs/data/event-catalog.md) · [Bounded contexts](docs/data/bounded-contexts.md) · [ADR 0004](docs/adr/0004-datos-y-eventos.md) |
+
+Los diagramas C4 se editan en draw.io (`docs/c4/*.xml`) y el DER en PlantUML (`docs/data/der.puml`).
+
+---
+
+###  Validar el contrato de la API
+```bash
+# Lint del contrato con las reglas del equipo
+npx @stoplight/spectral-cli lint api/openapi.yaml
+
+# Mock local para ejecutar los ejemplos de api/examples/
+npx @stoplight/prism-cli mock api/openapi.yaml
+
+# Regenerar el cliente TypeScript tras cambiar el contrato
+npx openapi-typescript api/openapi.yaml -o packages/api-client/src/schema.d.ts
+```
