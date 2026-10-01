@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net">
   <diagram name="l2-container" id="l2-container">
-    <mxGraphModel dx="1610" dy="1235" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1610" pageHeight="1235" math="0" shadow="0">
+    <mxGraphModel dx="1700" dy="1235" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1700" pageHeight="1235" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -9,67 +9,73 @@
           <mxGeometry x="20" y="8" width="900" height="30" as="geometry" />
         </mxCell>
         <mxCell id="boundary" value="&lt;b&gt;Plataforma CrediScore [Sistema de software]&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 4;fillColor=none;strokeColor=#444444;fontColor=#444444;verticalAlign=bottom;align=left;spacingLeft=10;spacingBottom=6;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="320" y="205" width="1040" height="1010" as="geometry" />
+          <mxGeometry x="270" y="205" width="1180" height="1010" as="geometry" />
         </mxCell>
         <mxCell id="solicitante" value="&lt;b&gt;Solicitante&lt;/b&gt;&lt;br&gt;[Persona]" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="505" y="75" width="170" height="85" as="geometry" />
+          <mxGeometry x="560" y="75" width="170" height="85" as="geometry" />
         </mxCell>
         <mxCell id="analista" value="&lt;b&gt;Analista de riesgo&lt;/b&gt;&lt;br&gt;[Persona]" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="910" y="75" width="170" height="85" as="geometry" />
+          <mxGeometry x="965" y="75" width="170" height="85" as="geometry" />
         </mxCell>
         <mxCell id="oficial" value="&lt;b&gt;Oficial de fraude&lt;/b&gt;&lt;br&gt;[Persona]" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1085" y="75" width="170" height="85" as="geometry" />
+          <mxGeometry x="1140" y="75" width="170" height="85" as="geometry" />
         </mxCell>
         <mxCell id="compliance" value="&lt;b&gt;Compliance&lt;/b&gt;&lt;br&gt;[Persona]" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1260" y="75" width="170" height="85" as="geometry" />
+          <mxGeometry x="1315" y="75" width="170" height="85" as="geometry" />
         </mxCell>
-        <mxCell id="web" value="&lt;b&gt;Web App&lt;/b&gt;&lt;br&gt;[React SPA · S3 + CloudFront]&lt;br&gt;&lt;br&gt;Onboarding KYC y solicitud de microcrédito." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="365" y="245" width="210" height="100" as="geometry" />
+        <mxCell id="web" value="&lt;b&gt;CrediScore Web App&lt;/b&gt;&lt;br&gt;[Aplicación web]&lt;br&gt;&lt;br&gt;Onboarding KYC y solicitud de microcrédito." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="245" width="210" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="mobile" value="&lt;b&gt;Mobile App&lt;/b&gt;&lt;br&gt;[React Native]&lt;br&gt;&lt;br&gt;El mismo flujo, en el teléfono." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="605" y="245" width="210" height="100" as="geometry" />
+        <mxCell id="mobile" value="&lt;b&gt;CrediScore Mobile App&lt;/b&gt;&lt;br&gt;[Aplicación móvil]&lt;br&gt;&lt;br&gt;El mismo flujo, en el teléfono." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="245" width="210" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="backoffice" value="&lt;b&gt;Backoffice Web&lt;/b&gt;&lt;br&gt;[React SPA · S3 + CloudFront]&lt;br&gt;&lt;br&gt;Re-evaluación, alertas y auditoría." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1065" y="245" width="210" height="100" as="geometry" />
+        <mxCell id="backoffice" value="&lt;b&gt;Backoffice Web&lt;/b&gt;&lt;br&gt;[Aplicación web]&lt;br&gt;&lt;br&gt;Re-evaluación, alertas y auditoría." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="245" width="210" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="gateway" value="&lt;b&gt;API Gateway&lt;/b&gt;&lt;br&gt;[Amazon API Gateway]&lt;br&gt;&lt;br&gt;OAuth2/JWT (Cognito), rate limit por partner y versionado /v1." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="660" y="425" width="320" height="95" as="geometry" />
+        <mxCell id="gateway" value="&lt;b&gt;API Gateway&lt;/b&gt;&lt;br&gt;[Amazon API Gateway]&lt;br&gt;&lt;br&gt;Autenticación OAuth2/JWT, rate limit por partner y versionado /v1." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="425" width="320" height="95" as="geometry" />
         </mxCell>
-        <mxCell id="onboarding" value="&lt;b&gt;Onboarding Service&lt;/b&gt;&lt;br&gt;[Python · FastAPI · EKS]&lt;br&gt;&lt;br&gt;Identidad del solicitante y verificación KYC (HU1)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="355" y="685" width="210" height="140" as="geometry" />
+        <mxCell id="fraud" value="&lt;b&gt;Fraud Detection Microservice&lt;/b&gt;&lt;br&gt;[AWS Fargate + Lambda]&lt;br&gt;&lt;br&gt;Reglas y red de señales de riesgo; alertas en tiempo real (HU3)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="395" y="685" width="210" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="scoring" value="&lt;b&gt;Scoring Service&lt;/b&gt;&lt;br&gt;[Python · FastAPI · XGBoost · EKS]&lt;br&gt;&lt;br&gt;Solicitudes, puntaje, decisión e idempotencia (HU2, HU5)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="595" y="685" width="210" height="140" as="geometry" />
+        <mxCell id="onboarding" value="&lt;b&gt;Onboarding Microservice&lt;/b&gt;&lt;br&gt;[AWS Fargate]&lt;br&gt;&lt;br&gt;Identidad del solicitante, KYC y consentimiento (HU1)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="635" y="685" width="210" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="compliance_svc" value="&lt;b&gt;Compliance &amp; Audit Service&lt;/b&gt;&lt;br&gt;[Python · FastAPI · EKS]&lt;br&gt;&lt;br&gt;Auditoría inmutable, control CMF y re-evaluación humana (HU4)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="835" y="685" width="210" height="140" as="geometry" />
+        <mxCell id="scoring" value="&lt;b&gt;Scoring Engine Microservice&lt;/b&gt;&lt;br&gt;[AWS Fargate]&lt;br&gt;&lt;br&gt;Solicitudes, puntaje, decisión e idempotencia (HU2, HU5)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="875" y="685" width="210" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="fraud" value="&lt;b&gt;Fraud Detection Service&lt;/b&gt;&lt;br&gt;[Python · consumidor Kafka · EKS]&lt;br&gt;&lt;br&gt;Reglas + modelo de anomalías; alertas en tiempo real (HU3)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1075" y="685" width="210" height="140" as="geometry" />
+        <mxCell id="compliance_svc" value="&lt;b&gt;Compliance Microservice&lt;/b&gt;&lt;br&gt;[AWS Fargate + Lambda]&lt;br&gt;&lt;br&gt;Auditoría inmutable, control CMF y re-evaluación humana (HU4)." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="685" width="210" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="postgres" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;[Amazon RDS PostgreSQL 16]&lt;br&gt;&lt;br&gt;Un schema por servicio + tabla outbox." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="495" y="915" width="170" height="100" as="geometry" />
+        <mxCell id="graph" value="&lt;b&gt;Base de grafos&lt;/b&gt;&lt;br&gt;[Neo4j / Neptune]&lt;br&gt;&lt;br&gt;Red de señales de riesgo." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="295" y="915" width="170" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="s3" value="&lt;b&gt;Object Storage&lt;/b&gt;&lt;br&gt;[Amazon S3 · Object Lock]&lt;br&gt;&lt;br&gt;Modelos ML y archivo inmutable de auditoría." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="735" y="915" width="170" height="100" as="geometry" />
+        <mxCell id="redis" value="&lt;b&gt;Redis&lt;/b&gt;&lt;br&gt;[Redis]&lt;br&gt;&lt;br&gt;Sesión/OTP, contadores de velocidad y cola de solicitudes pendientes." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="535" y="915" width="170" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="redis" value="&lt;b&gt;Redis&lt;/b&gt;&lt;br&gt;[Amazon ElastiCache]&lt;br&gt;&lt;br&gt;Contadores de velocidad y listas negras." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="975" y="915" width="170" height="100" as="geometry" />
+        <mxCell id="aurora" value="&lt;b&gt;Core relations DB&lt;/b&gt;&lt;br&gt;[Aurora PostgreSQL Serverless v2]&lt;br&gt;&lt;br&gt;Escritura transaccional; patrón Outbox." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="775" y="915" width="170" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="bus" value="&lt;b&gt;Event Bus&lt;/b&gt;&lt;br&gt;[Amazon MSK Serverless · Apache Kafka]&lt;br&gt;&lt;br&gt;Eventos de dominio particionados por application_id; entrega at-least-once." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="355" y="1095" width="930" height="80" as="geometry" />
+        <mxCell id="opensearch" value="&lt;b&gt;Proyección de lectura&lt;/b&gt;&lt;br&gt;[OpenSearch]&lt;br&gt;&lt;br&gt;Dashboard de analistas (CQRS) y búsqueda de auditoría." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="915" width="170" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="bureau" value="&lt;b&gt;Bureau de crédito&lt;/b&gt;&lt;br&gt;[Sistema externo]&lt;br&gt;&lt;br&gt;Historial y morosidad." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#8A8A8A;strokeColor=#5F5F5F;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="20" y="553" width="190" height="95" as="geometry" />
+        <mxCell id="s3" value="&lt;b&gt;Archivo de auditoría&lt;/b&gt;&lt;br&gt;[S3 + CloudWatch Logs]&lt;br&gt;&lt;br&gt;Trazabilidad inmutable para la CMF." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="915" width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="bus" value="&lt;b&gt;Event Bus&lt;/b&gt;&lt;br&gt;[Amazon MSK Serverless · Apache Kafka]&lt;br&gt;&lt;br&gt;Eventos de dominio; entrega at-least-once, consumidores idempotentes por event_id." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="295" y="1095" width="1130" height="80" as="geometry" />
         </mxCell>
         <mxCell id="kyc" value="&lt;b&gt;Proveedor de identidad (KYC)&lt;/b&gt;&lt;br&gt;[Sistema externo]&lt;br&gt;&lt;br&gt;Valida identidad y RUT." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#8A8A8A;strokeColor=#5F5F5F;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="20" y="707" width="190" height="95" as="geometry" />
+          <mxGeometry x="20" y="553" width="190" height="95" as="geometry" />
         </mxCell>
         <mxCell id="partner" value="&lt;b&gt;Partner comercial&lt;/b&gt;&lt;br&gt;[Sistema externo]&lt;br&gt;&lt;br&gt;Origina créditos por API." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#8A8A8A;strokeColor=#5F5F5F;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1400" y="425" width="190" height="95" as="geometry" />
+          <mxGeometry x="1490" y="425" width="190" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="bureau" value="&lt;b&gt;Bureau de crédito&lt;/b&gt;&lt;br&gt;[Sistema externo]&lt;br&gt;&lt;br&gt;Historial y morosidad." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#8A8A8A;strokeColor=#5F5F5F;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="553" width="190" height="95" as="geometry" />
         </mxCell>
         <mxCell id="cmf" value="&lt;b&gt;Servicios CMF&lt;/b&gt;&lt;br&gt;[Sistema externo]&lt;br&gt;&lt;br&gt;Reporte regulatorio." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#8A8A8A;strokeColor=#5F5F5F;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1400" y="553" width="190" height="95" as="geometry" />
+          <mxGeometry x="1490" y="707" width="190" height="95" as="geometry" />
         </mxCell>
         <mxCell id="e0" value="Usa [HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="solicitante" target="web">
           <mxGeometry x="-0.10" relative="1" as="geometry">
@@ -108,72 +114,80 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="e9" value="/identity-verifications" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="onboarding">
-          <mxGeometry x="0.28" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e10" value="/credit-applications" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="scoring">
-          <mxGeometry x="-0.40" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e11" value="/reevaluations" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="compliance_svc">
-          <mxGeometry x="-0.40" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e12" value="Valida identidad&lt;br&gt;[HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="onboarding" target="kyc">
-          <mxGeometry x="0.00" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e13" value="Consulta historial [HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="bureau">
-          <mxGeometry x="0.40" relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="700" y="600" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e14" value="Reporta créditos [HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="cmf">
-          <mxGeometry x="0.40" relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="940" y="600" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e15" value="SQL" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="onboarding" target="postgres">
-          <mxGeometry x="0.00" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e16" value="SQL" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="postgres">
-          <mxGeometry x="0.00" relative="1" as="geometry">
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e17" value="SQL" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="postgres">
           <mxGeometry x="-0.56" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e18" value="lee modelo" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="s3">
-          <mxGeometry x="0.24" relative="1" as="geometry">
+        <mxCell id="e10" value="/credit-applications" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="scoring">
+          <mxGeometry x="0.04" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e19" value="archiva" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="s3">
-          <mxGeometry x="0.24" relative="1" as="geometry">
+        <mxCell id="e11" value="/reevaluations" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="compliance_svc">
+          <mxGeometry x="-0.50" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e20" value="lee / escribe" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fraud" target="redis">
+        <mxCell id="e12" value="Valida identidad [HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="onboarding" target="kyc">
+          <mxGeometry x="0.50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="740" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="Consulta historial [HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="bureau">
+          <mxGeometry x="0.50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="Reporta créditos&lt;br&gt;[HTTPS]" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="cmf">
           <mxGeometry x="0.00" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e21" value="publica" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.113;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="onboarding" target="bus">
+        <mxCell id="e15" value="grafo" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fraud" target="graph">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" value="velocidad" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fraud" target="redis">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e17" value="sesión / OTP" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="onboarding" target="redis">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e18" value="SQL" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="onboarding" target="aurora">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e19" value="escritura" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="aurora">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e20" value="lectura (CQRS)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="scoring" target="opensearch">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e21" value="búsqueda" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="opensearch">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e22" value="archiva" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="compliance_svc" target="s3">
+          <mxGeometry x="0.00" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e23" value="consume solicitudes,&lt;br&gt;publica alertas &amp;lt; 500 ms" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.181;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="fraud" target="bus">
           <mxGeometry x="0.68" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e22" value="publica / consume" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.371;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="scoring" target="bus">
+        <mxCell id="e24" value="publica (outbox)" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.394;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="onboarding" target="bus">
           <mxGeometry x="0.68" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e23" value="consume / publica" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.629;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="compliance_svc" target="bus">
+        <mxCell id="e25" value="publica (outbox) / consume" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.606;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="scoring" target="bus">
           <mxGeometry x="0.68" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>
-        <mxCell id="e24" value="consume solicitudes,&lt;br&gt;publica alertas &amp;lt; 500 ms" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.887;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="fraud" target="bus">
+        <mxCell id="e26" value="consume todo / publica" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#555555;fontColor=#333333;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.819;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="compliance_svc" target="bus">
           <mxGeometry x="0.68" relative="1" as="geometry">
           </mxGeometry>
         </mxCell>

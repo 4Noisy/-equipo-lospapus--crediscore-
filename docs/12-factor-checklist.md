@@ -1,26 +1,31 @@
 # Checklist 12-Factor — CrediScore
 
-Auditoría del diseño ([C4 L2](c4/l2-container.png), [ADR 0003](adr/0003-cloud-style.md)) contra los 12 factores. El repositorio todavía no tiene código, así que **Cumple** significa que el diseño ya lo resuelve y **No cumple** que hay una brecha con una acción asignada.
+Auditoría del diseño ([C4 L2](c4/l2-container.png)) contra los 12 factores, presentada en la S04. El repositorio todavía no tiene código: **Cumple** significa que el diseño ya lo resuelve y **No cumple** que hay una brecha con acción y responsable. Las decisiones de plataforma están en el [ADR 0003](adr/0003-cloud-style.md).
 
-| # | Factor | Estado | Evidencia o brecha | Acción | Responsable |
-| :-: | :--- | :--- | :--- | :--- | :--- |
-| 01 | Codebase | No cumple | El repo solo tiene documentación; los 4 servicios compartirán un monorepo. | Un directorio por servicio (`services/<servicio>/`) con build y pipeline propios. Prohibido copiar código entre servicios: lo compartido son los contratos (`api/`, catálogo de eventos). | Tech Lead |
-| 02 | Dependencies | No cumple | No hay manifiestos de dependencias. | `pyproject.toml` + lockfile por servicio, `package-lock.json` en los frontends e imágenes Docker sin librerías instaladas a mano. | DevSecOps |
-| 03 | Config | Cumple | Toda la configuración entra por variables de entorno (`DATABASE_URL`, `KAFKA_BOOTSTRAP_SERVERS`, `REDIS_URL`, `KYC_API_URL`, `BUREAU_API_URL`, `MODEL_URI`); los secretos viven en AWS Secrets Manager. | Publicar `.env.example` por servicio; `.env` ya está en `.gitignore`. | DevSecOps |
-| 04 | Backing services | Cumple | PostgreSQL, Kafka, Redis, S3, KYC y bureau se adjuntan por URL; cambiar de proveedor no exige recompilar. | Acceder a KYC y bureau detrás de una interfaz (Ports & Adapters) para poder simularlos. | Tech Lead |
-| 05 | Build, release, run | No cumple | No existe pipeline. | GitHub Actions construye una imagen por commit (tag = SHA) y la publica en ECR; release = imagen + configuración del ambiente; nunca se edita en ejecución. Se implementa en S08. | DevSecOps |
-| 06 | Processes | Cumple | Los servicios no guardan estado: solicitudes y claves de idempotencia en PostgreSQL, contadores de fraude en Redis, modelo de ML de solo lectura. | Prohibir sesiones en memoria en la revisión de PR. | Tech Lead |
-| 07 | Port binding | Cumple | Cada servicio expone HTTP con uvicorn en `$PORT`; no depende de un servidor de aplicaciones externo. | — | Tech Lead |
-| 08 | Concurrency | Cumple | Tres tipos de proceso por servicio (`web`, `consumer`, `outbox-relay`) que escalan por réplicas; el consumo se reparte con particiones y *consumer groups* de Kafka. | Definir HPA por tipo de proceso en S07. | DevSecOps |
-| 09 | Disposability | No cumple | El Scoring Service carga el modelo de ML al arrancar, lo que alarga el inicio. | *Readiness probe* que solo pasa con el modelo cargado; al recibir SIGTERM se deja de consumir, se confirman offsets y se termina en < 30 s. Medir el arranque y fijar un máximo de 20 s. | AI/Data |
-| 10 | Dev/prod parity | No cumple | No hay ambiente de desarrollo definido. | `docker-compose` con PostgreSQL 16, Kafka y Redis en las mismas versiones mayores que producción, LocalStack para S3 y Prism para simular KYC y bureau. Prohibido SQLite. | QA |
-| 11 | Logs | Cumple | Logs JSON a stdout con `trace_id` y `application_id`, recolectados por CloudWatch. | Enmascarar el RUT y no registrar datos personales; añadir una prueba que falle si aparece un RUT en los logs. | QA |
-| 12 | Admin processes | No cumple | No hay mecanismo de migraciones ni tareas puntuales. | Migraciones con Alembic como *Job* de Kubernetes desde la misma imagen; el control normativo diario (HU4) y el reentrenamiento como *CronJob*. Nada por SSH. | DevSecOps |
+| # | Factor | Estado | Acción concreta | Responsable |
+| :-: | :--- | :--- | :--- | :--- |
+| 01 | Codebase | No cumple | Un repositorio por servicio, con pipeline de CI independiente. | Martin Jara |
+| 02 | Dependencies | No cumple | Manifiesto de dependencias aislado e imagen Docker propia por servicio. | Benjamín Garrido |
+| 03 | Config | No cumple | Variables de entorno + AWS Secrets Manager; sin archivos `config.*.json` en el repo. | Martin Jara |
+| 04 | Backing services | Cumple | Formalizar base de datos, Event Bus y KYC como URL inyectada por variable de entorno. | Benjamín Garrido |
+| 05 | Build, release, run | No cumple | CI/CD: build → imagen versionada en ECR → deploy. | Martin Jara |
+| 06 | Processes | Cumple | Confirmar que los servicios son *stateless*: sesión vía JWT, sin estado local. | Abdiel Ortiz / Nelson Arevalo |
+| 07 | Port binding | Cumple | Cada imagen expone su propio puerto, sin servidor de aplicaciones externo. | Benjamín Garrido |
+| 08 | Concurrency | No cumple | Auto-scaling horizontal (ECS) en Scoring y Fraude. | Martin Jara |
+| 09 | Disposability | No cumple | *Graceful shutdown* (SIGTERM < 30 s) en los microservicios. | Justin Navarro |
+| 10 | Dev/prod parity | No cumple | Docker Compose local con PostgreSQL y Kafka reales. | Justin Navarro |
+| 11 | Logs | No cumple | JSON a stdout, centralizado en CloudWatch / OpenSearch. | Martin Jara |
+| 12 | Admin processes | No cumple | Migraciones (Flyway) como *Job* del mismo pipeline. | Martin Jara |
 
 ## Resumen
 
-* **Cumple:** 6 de 12 (03, 04, 06, 07, 08, 11).
-* **No cumple:** 6 de 12 (01, 02, 05, 09, 10, 12); todos tienen acción y responsable.
+* **Cumple:** 3 de 12 (04, 06, 07).
+* **No cumple:** 9 de 12; todos con acción y responsable.
 * **No aplica:** ninguno.
 
-Los factores 01, 02, 05, 10 y 12 se cierran al crear el esqueleto de servicios y el pipeline (S07 y S08). El 09 depende del tamaño del modelo y se verifica con una medición, no con una revisión de diseño.
+## Brechas prioritarias antes de desplegar
+
+1. **Build, release, run (05).** Sin pipeline las tres etapas se mezclan: no hay forma de garantizar que lo que se prueba es lo que se despliega.
+2. **Concurrency (08).** Scoring y Fraude deben escalar horizontalmente de forma independiente para sostener la propagación de fraude en < 500 ms bajo carga.
+3. **Disposability (09).** Un cierre no controlado puede perder eventos de fraude en vuelo y romper la idempotencia y la trazabilidad CMF.
+4. **Logs (11).** Sin logs estructurados y centralizados no se puede auditar una decisión de crédito ante la CMF.
