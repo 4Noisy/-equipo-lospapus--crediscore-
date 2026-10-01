@@ -3,6 +3,7 @@
 ## Matriz de Priorización MoSCoW
 
 | ID | Nombre | Prioridad | Estimación (SP) |
+| :--- | :--- | :--- | :---: |
 | **HU1** | Onboarding KYC | **Must Have** | 5 |
 | **HU2** | Scoring | **Must Have** | 8 |
 | **HU3** | Antifraude | **Must Have** | 8 |
