@@ -1,6 +1,6 @@
 # Catálogo de eventos de dominio — CrediScore
 
-Los 15 eventos del ciclo de vida de una solicitud de crédito. Las decisiones de broker, entrega y patrones están en el [ADR 0004](../adr/0004-datos-y-eventos.md).
+Los 15 eventos del ciclo de vida de una solicitud de crédito, más 1 de compensación de la saga. Las decisiones de broker, entrega y patrones están en el [ADR 0004](../adr/0004-datos-y-eventos.md).
 
 ## Formato
 
@@ -45,23 +45,26 @@ Todos los eventos comparten este sobre; la tabla de cada evento describe solo `d
 
 | # | Evento | Versión | Productor | Consumidores |
 | :-: | :--- | :-: | :--- | :--- |
-| 1 | `applicant.registered` | 1.0 | Onboarding | Scoring, Compliance |
-| 2 | `applicant.kyc_verified` | 1.0 | Onboarding | Scoring, Fraude, Compliance |
-| 3 | `credit_application.submitted` | 1.0 | API Gateway | Scoring, Fraude, Compliance |
+| 1 | `applicant.registered` | 1.0 | Onboarding | Scoring, Cumplimiento |
+| 2 | `applicant.kyc_verified` | 1.0 | Onboarding | Scoring, Antifraude, Cumplimiento |
+| 3 | `credit_application.submitted` | 1.0 | Scoring | Antifraude, Cumplimiento |
 | 4 | `financial_profile.captured` | 1.0 | Onboarding | Scoring |
-| 5 | `scoring.requested` | 1.0 | Scoring Engine | Scoring (interno), Compliance |
-| 6 | `scoring.completed` | 1.0 | Scoring Engine | Fraude, Decision, Compliance, Dashboard |
-| 7 | `fraud_check.requested` | 1.0 | Scoring Engine | Fraud Detection |
-| 8 | `fraud_check.completed` | 1.0 | Fraud Detection | Decision, Compliance, Dashboard |
-| 9 | `fraud_alert.raised` | 1.0 | Fraud Detection | Backoffice fraude, Compliance |
-| 10 | `manual_review.requested` | 1.0 | Decision | Backoffice riesgo, Compliance |
-| 11 | `manual_review.completed` | 1.0 | Backoffice riesgo | Decision, Compliance |
-| 12 | `credit_decision.approved` | 1.0 | Decision | Onboarding, Compliance, Partner, Dashboard |
-| 13 | `credit_decision.rejected` | 1.0 | Decision | Onboarding, Compliance, Dashboard |
-| 14 | `compliance_record.logged` | 1.0 | Compliance | Dashboard (solo lectura) |
-| 15 | `partner.notified` | 1.0 | API Gateway | Partner comercial (externo) |
+| 5 | `scoring.requested` | 1.0 | Scoring | Scoring (interno), Cumplimiento |
+| 6 | `scoring.completed` | 1.0 | Scoring | Antifraude, Cumplimiento, Dashboard |
+| 7 | `fraud_check.requested` | 1.0 | Scoring | Antifraude |
+| 8 | `fraud_check.completed` | 1.0 | Antifraude | Scoring, Cumplimiento, Dashboard |
+| 9 | `fraud_alert.raised` | 1.0 | Antifraude | Antifraude (backoffice), Cumplimiento |
+| 10 | `manual_review.requested` | 1.0 | Scoring | Scoring (backoffice), Cumplimiento |
+| 11 | `manual_review.completed` | 1.0 | Scoring | Scoring (interno), Cumplimiento |
+| 12 | `credit_decision.approved` | 1.0 | Scoring | Onboarding, Cumplimiento, Partner, Dashboard |
+| 13 | `credit_decision.rejected` | 1.0 | Scoring | Onboarding, Cumplimiento, Dashboard |
+| 14 | `credit_decision.revoked` | 1.0 | Scoring | Onboarding, Cumplimiento, Partner, Dashboard |
+| 15 | `audit_record.logged` | 1.0 | Cumplimiento | Dashboard (solo lectura) |
+| 16 | `partner.notified` | 1.0 | Scoring | Partner comercial (externo) |
 
-La saga por coreografía usa además eventos de compensación, como `credit_decision.revoked` ([ADR 0004](../adr/0004-datos-y-eventos.md)); no forman parte de los 15 eventos del ciclo de vida.
+Productor y consumidores se nombran por [bounded context](bounded-contexts.md), no por contenedor.
+
+`credit_decision.revoked` es el evento de compensación de la saga por coreografía ([ADR 0004](../adr/0004-datos-y-eventos.md)): revierte un `credit_decision.approved`. Los otros 15 son el ciclo de vida de la solicitud.
 
 ## Schema de `data` por evento
 
@@ -82,7 +85,8 @@ Los campos se derivan del [DER](der.png) del contexto Scoring & Riesgo.
 | 11 | `manual_review.completed` | `review_id` uuid · `decision_id` uuid · `analyst_id` uuid · `outcome` string · `notes` string |
 | 12 | `credit_decision.approved` | `decision_id` uuid · `application_id` uuid · `decided_by` string (`model`, `analyst`) · `decided_at` date-time |
 | 13 | `credit_decision.rejected` | `decision_id` uuid · `application_id` uuid · `decided_by` string · `reasons` string[] · `decided_at` date-time |
-| 14 | `compliance_record.logged` | `audit_record_id` uuid · `source_event_id` uuid · `application_id` uuid · `logged_at` date-time |
-| 15 | `partner.notified` | `application_id` uuid · `decision` string · `notified_at` date-time |
+| 14 | `credit_decision.revoked` | `decision_id` uuid · `application_id` uuid · `reason` string · `revoked_at` date-time |
+| 15 | `audit_record.logged` | `audit_record_id` uuid · `source_event_id` uuid · `application_id` uuid · `logged_at` date-time |
+| 16 | `partner.notified` | `application_id` uuid · `decision` string · `notified_at` date-time |
 
 `partner.notified` es el aviso que el partner recibe por el webhook `creditApplicationDecided` de [`api/openapi.yaml`](../../api/openapi.yaml).
