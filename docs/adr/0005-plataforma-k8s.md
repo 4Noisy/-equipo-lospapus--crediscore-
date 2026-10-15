@@ -1,4 +1,4 @@
-# ADR 0004: Plataforma de contenedores, Kubernetes e infraestructura como código
+# ADR 0005: Plataforma de contenedores, Kubernetes e infraestructura como código
 
 **Fecha:** 2026-10-15  
 **Estado:** Propuesto  
