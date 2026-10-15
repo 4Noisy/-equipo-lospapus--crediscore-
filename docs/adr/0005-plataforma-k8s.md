@@ -4,7 +4,6 @@
 **Estado:** Propuesto  
 **Relacionado con:** [ADR 0002](0002-estilo-arquitectonico.md), [ADR 0003](0003-cloud-style.md), [ADR 0004 de datos y eventos](0004-datos-y-eventos.md), [checklist 12-Factor](../12-factor-checklist.md), [servicios gestionados](../arch/managed-services.md), [Dockerfile](../../Dockerfile), [manifiestos K8s](../../k8s/), [Terraform](../../terraform/main.tf)
 
-> Nota de numeración: este es el ADR 0004 que exige la rúbrica de la S07 (`docs/adr/0004-plataforma-k8s.md`). El [ADR 0004 de la S06](0004-datos-y-eventos.md) conserva su número y se distingue por el nombre de archivo.
 
 ## Contexto
 
