@@ -14,7 +14,7 @@ Con los bounded contexts explícitos, falta decidir el motor de persistencia de 
 | :--- | :--- | :--- |
 | **Onboarding / Identidad** | Aurora PostgreSQL + Redis | El dominio requiere integridad referencial y joins. Redis guarda la sesión y el OTP. |
 | **Scoring / Riesgo** | Aurora PostgreSQL (escritura) + OpenSearch (lectura) | Separa la escritura transaccional de las consultas complejas del dashboard de analistas. |
-| **Antifraude** | Neo4j / Amazon Neptune + Redis | Necesita un motor de grafos: un modelo relacional no es apto para analizar redes de riesgo. Redis lleva los contadores de velocidad. |
+| **Antifraude** | Amazon Neptune + Redis | Necesita un motor de grafos: un modelo relacional no es apto para analizar redes de riesgo. Redis lleva los contadores de velocidad. |
 | **Cumplimiento / Auditoría** | OpenSearch + S3 | Requiere búsqueda y un archivo inmutable para una trazabilidad real ante la CMF. |
 
 ### Broker
@@ -23,7 +23,7 @@ Con los bounded contexts explícitos, falta decidir el motor de persistencia de 
 ### Patrones
 | Patrón | ¿Se aplica? | Dónde y por qué |
 | :--- | :-: | :--- |
-| **Outbox** | Sí | Onboarding y Scoring publican a Kafka desde la misma transacción: evita perder eventos si el broker cae justo después del commit. |
+| **Outbox** | Sí | Onboarding y Scoring guardan el evento en una tabla outbox dentro de la misma transacción que el dato; un relay lo publica después a Kafka. Así no se pierde el evento si el broker cae justo después del commit. |
 | **CQRS** | Sí | Scoring separa físicamente la escritura (Aurora) de la lectura (OpenSearch) para el dashboard de analistas. |
 | **Saga por coreografía** | Sí | El flujo de crédito cruza los 4 contextos sin 2PC, con compensaciones como `credit_decision.revoked`. |
 | **Event Sourcing** | Solo en Cumplimiento | Es el único contexto que exige el historial completo; en los demás, la complejidad del *replay* no se justifica. |
@@ -32,7 +32,7 @@ Con los bounded contexts explícitos, falta decidir el motor de persistencia de 
 
 ### Positivas
 * **Motor:** cada contexto usa el motor que calza con su patrón de acceso real.
-* **Trazabilidad:** Compliance obtiene una auditoría inmutable real para la CMF.
+* **Trazabilidad:** Cumplimiento obtiene una auditoría inmutable real para la CMF.
 
 ### Negativas
 * **Operación:** 5 motores que mantener; consistencia eventual entre Aurora y OpenSearch.

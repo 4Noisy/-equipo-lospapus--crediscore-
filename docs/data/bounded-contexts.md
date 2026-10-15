@@ -6,10 +6,10 @@ Cuatro contextos, uno por servicio del [C4 L2](../c4/l2-container.png). La front
 
 | Contexto | "Solicitante" es… | Agregado raíz |
 | :--- | :--- | :--- |
-| **Scoring / Riesgo** | Persona con perfil financiero y categoría de riesgo. | `CreditApplication` |
 | **Onboarding / Identidad** | Persona con RUT validado, KYC y consentimiento. | `Applicant` |
-| **Cumplimiento / Auditoría** | Referencia opaca a decisiones para la CMF. | `AuditRecord` |
+| **Scoring / Riesgo** | Persona con perfil financiero y categoría de riesgo. | `CreditApplication` |
 | **Antifraude** | Nodo en una red de señales de riesgo y reglas. | `FraudCase` |
+| **Cumplimiento / Auditoría** | Referencia opaca a decisiones para la CMF. | `AuditRecord` |
 
 ## Contextos
 
@@ -17,8 +17,10 @@ Cuatro contextos, uno por servicio del [C4 L2](../c4/l2-container.png). La front
 | :--- | :--- | :--- | :--- | :-: |
 | **Onboarding / Identidad** | Onboarding Microservice | Aurora PostgreSQL + Redis (sesión y OTP) | Outbox | HU1 |
 | **Scoring / Riesgo** | Scoring Engine Microservice | Aurora PostgreSQL (escritura) + OpenSearch (lectura) | Outbox, CQRS | HU2, HU5 |
-| **Antifraude** | Fraud Detection Microservice | Neo4j / Neptune (grafo) + Redis (contadores de velocidad) | Saga: compensaciones | HU3 |
+| **Antifraude** | Fraud Detection Microservice | Amazon Neptune (grafo) + Redis (contadores de velocidad) | — | HU3 |
 | **Cumplimiento / Auditoría** | Compliance Microservice | OpenSearch (búsqueda) + S3 (archivo inmutable) | Event Sourcing | HU4 |
+
+La saga por coreografía no es de un contexto: el flujo de crédito cruza los 4 vía eventos (ADR 0004).
 
 El DER del contexto principal (Scoring / Riesgo) está en [der.png](der.png), con fuente en [der.puml](der.puml). La justificación de cada motor está en el [ADR 0004](../adr/0004-datos-y-eventos.md).
 
