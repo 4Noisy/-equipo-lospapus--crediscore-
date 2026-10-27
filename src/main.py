@@ -11,6 +11,7 @@ Limitaciones conocidas (placeholder del lab):
 - El puntaje es una regla fija, no el modelo de ML.
 - No valida el token OAuth2 del contrato.
 """
+
 import hashlib
 import json
 import logging
@@ -37,6 +38,7 @@ MODEL_VERSION = "placeholder-0.1.0"
 
 
 # ---------- Modelos (api/openapi.yaml · components.schemas) ----------
+
 
 class CreditApplicationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -105,6 +107,7 @@ async def http_error(request: Request, exc: HTTPException):
 
 # ---------- Scoring placeholder ----------
 
+
 def decide(app_id: str, data: CreditApplicationInput) -> dict:
     """Regla fija 0–1000: penaliza montos altos y plazos largos. La reemplaza el modelo real."""
     carga = data.amount / 5_000_000
@@ -117,12 +120,19 @@ def decide(app_id: str, data: CreditApplicationInput) -> dict:
     else:
         outcome, risk, reasons = "rejected", "high", ["AMOUNT_TOO_HIGH_FOR_TERM"]
     return Decision(
-        application_id=app_id, outcome=outcome, score=score, risk_category=risk,
-        reasons=reasons, model_version=MODEL_VERSION, decided_by="model", decided_at=now(),
+        application_id=app_id,
+        outcome=outcome,
+        score=score,
+        risk_category=risk,
+        reasons=reasons,
+        model_version=MODEL_VERSION,
+        decided_by="model",
+        decided_at=now(),
     ).model_dump(mode="json")
 
 
 # ---------- Endpoints ----------
+
 
 @app.get("/health")
 def health():
@@ -142,25 +152,29 @@ def create_credit_application(
 ):
     trace_id = request.state.trace_id
     key = str(idempotency_key)
-    body_hash = hashlib.sha256(
-        json.dumps(body.model_dump(mode="json"), sort_keys=True).encode()
-    ).hexdigest()
+    body_hash = hashlib.sha256(json.dumps(body.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
 
     if key in IDEMPOTENCY:
         saved_hash, saved_response = IDEMPOTENCY[key]
         if saved_hash != body_hash:
-            return problem(409, "Conflicto de idempotencia",
-                           "La misma Idempotency-Key se usó con otro cuerpo.", trace_id)
+            return problem(
+                409, "Conflicto de idempotencia", "La misma Idempotency-Key se usó con otro cuerpo.", trace_id
+            )
         return JSONResponse(
-            status_code=201, content=saved_response,
-            headers={"Idempotent-Replayed": "true",
-                     "Location": f"/v1/credit-applications/{saved_response['id']}"},
+            status_code=201,
+            content=saved_response,
+            headers={"Idempotent-Replayed": "true", "Location": f"/v1/credit-applications/{saved_response['id']}"},
         )
 
     app_id = str(uuid.uuid4())
     ts = now()
-    application = {"id": app_id, "status": "received", **body.model_dump(mode="json", exclude_none=True),
-                   "created_at": ts, "updated_at": ts}
+    application = {
+        "id": app_id,
+        "status": "received",
+        **body.model_dump(mode="json", exclude_none=True),
+        "created_at": ts,
+        "updated_at": ts,
+    }
     APPLICATIONS[app_id] = application
     IDEMPOTENCY[key] = (body_hash, application)
 
@@ -169,7 +183,8 @@ def create_credit_application(
     log.info("solicitud creada id=%s trace_id=%s", app_id, trace_id)
 
     return JSONResponse(
-        status_code=201, content=application,
+        status_code=201,
+        content=application,
         headers={"Idempotent-Replayed": "false", "Location": f"/v1/credit-applications/{app_id}"},
     )
 
@@ -191,5 +206,9 @@ def get_credit_application_decision(application_id: uuid.UUID):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", "8080")),  # nosec B104 (contenedor)
-                timeout_graceful_shutdown=25)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",  # nosec B104 (contenedor)
+        port=int(os.getenv("APP_PORT", "8080")),
+        timeout_graceful_shutdown=25,
+    )
