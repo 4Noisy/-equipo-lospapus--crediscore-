@@ -7,18 +7,19 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-# Si llega un push nuevo a la misma rama, cancela la ejecución anterior
+# En PRs cancela ejecuciones viejas; en main NO, para no cortar un promote a medias
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Permisos mínimos por defecto (principio de mínimo privilegio)
 permissions:
   contents: read
 
 env:
-  IMAGE_NAME: crediscore
+  # Debe coincidir con la imagen de gitops: ghcr.io/4noisy/scoring-api
+  IMAGE_NAME: scoring-api
   PYTHON_VERSION: "3.11"
+  GITOPS_REPO: 4Noisy/lospapus-gitops
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -73,8 +74,7 @@ jobs:
           path: coverage.xml
 
   # ---------------------------------------------------------------------------
-  # 2) BUILD-AND-PUSH: construye la imagen UNA vez y la publica en GHCR.
-  #    Solo en push (nunca en PRs) y solo si quality pasó.
+  # 2) BUILD-AND-PUSH: construye UNA vez y publica ghcr.io/<owner>/scoring-api:<sha>
   # ---------------------------------------------------------------------------
   build-and-push:
     name: build-and-push
@@ -91,9 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GHCR exige minúsculas y nombres que empiecen con alfanumérico.
-      # El nombre del repo empieza con "-", así que usamos un nombre fijo.
-      - name: Calcular nombre de imagen
+      - name: Calcular nombre de imagen (GHCR exige minúsculas)
         id: meta
         run: |
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
@@ -131,9 +129,9 @@ jobs:
           exit-code: "1"
 
   # ---------------------------------------------------------------------------
-  # 3) PROMOTE: NO reconstruye. Re-etiqueta la imagen ya probada como
-  #    "stable"/"latest". Solo desde main y con aprobación manual del
-  #    environment "production".
+  # 3) PROMOTE (GitOps): NO toca el clúster. Edita el repo lospapus-gitops:
+  #    - dev  -> commit directo a main; Argo CD sincroniza solo.
+  #    - prod -> Pull Request (requiere revisión humana antes de mergear).
   # ---------------------------------------------------------------------------
   promote:
     name: promote
@@ -141,23 +139,91 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: production
+    concurrency:
+      group: promote-gitops
+      cancel-in-progress: false
     permissions:
       contents: read
-      packages: write
+    env:
+      IMAGE: ${{ needs.build-and-push.outputs.image }}
+      DIGEST: ${{ needs.build-and-push.outputs.digest }}
+      TAG: ${{ github.sha }}
     steps:
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Promover imagen (retag por digest, sin rebuild)
+      - name: Verificar secret GITOPS_TOKEN
+        env:
+          GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
         run: |
-          IMAGE="${{ needs.build-and-push.outputs.image }}"
-          SRC="${IMAGE}:${{ github.sha }}"
-          docker buildx imagetools create --tag "${IMAGE}:stable" --tag "${IMAGE}:latest" "${SRC}"
-          echo "Promovida ${SRC} -> stable, latest" >> "$GITHUB_STEP_SUMMARY"
-          echo "Digest: ${{ needs.build-and-push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$GITOPS_TOKEN" ]; then
+            echo "::error::Falta el secret GITOPS_TOKEN (PAT con acceso a ${GITOPS_REPO})"
+            exit 1
+          fi
+
+      - name: Checkout repo GitOps
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          ref: main
+          fetch-depth: 0
+          path: gitops
+
+      - name: Dev - fijar tag y commitear a main (Argo CD despliega)
+        working-directory: gitops
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          F=overlays/dev/kustomization.yaml
+          grep -q "name: ${IMAGE}" "$F" || { echo "::error::${IMAGE} no aparece en $F"; exit 1; }
+
+          # Entre comillas: un SHA solo con dígitos/“e” podría interpretarse como número
+          sed -i -E "s|^(\s*newTag:)\s*[^ #]+|\1 \"${TAG}\"|" "$F"
+          kubectl kustomize overlays/dev > /dev/null
+
+          if git diff --quiet; then echo "dev ya estaba en ${TAG}"; exit 0; fi
+          git commit -am "chore(dev): scoring-api -> ${TAG:0:7}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Prod - abrir/actualizar PR (2 revisores)
+        working-directory: gitops
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="promote/prod-scoring-api"
+          git fetch origin main
+          git checkout -B "$BRANCH" origin/main
+
+          F=overlays/prod/kustomization.yaml
+          grep -q "name: ${IMAGE}" "$F" || { echo "::error::${IMAGE} no aparece en $F"; exit 1; }
+          sed -i -E "s|^(\s*newTag:)\s*[^ #]+|\1 \"${TAG}\"|" "$F"
+          kubectl kustomize overlays/prod > /dev/null
+
+          if git diff --quiet; then echo "prod ya estaba en ${TAG}"; exit 0; fi
+          git commit -am "chore(prod): scoring-api -> ${TAG:0:7}"
+          git push --force origin "$BRANCH"
+
+          TITLE="Promover scoring-api ${TAG:0:7} a prod"
+          BODY="Imagen: \`${IMAGE}:${TAG}\`
+          Digest: \`${DIGEST}\`
+          Commit origen: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${TAG}
+          Pipeline: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Ya pasó quality, build y escaneo Trivy. Requiere revisión antes de mergear."
+
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" = "0" ]; then
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body "$BODY"
+          else
+            gh pr edit "$BRANCH" --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Promoción GitOps"
+            echo "- Imagen: \`${IMAGE}:${TAG}\`"
+            echo "- dev: commit directo a main (Argo CD sincroniza)"
+            echo "- prod: PR abierto/actualizado en ${GITOPS_REPO}"
+          } >> "$GITHUB_STEP_SUMMARY"
