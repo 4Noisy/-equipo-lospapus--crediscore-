@@ -177,7 +177,7 @@ jobs:
           F=overlays/dev/kustomization.yaml
           grep -q "name: ${IMAGE}" "$F" || { echo "::error::${IMAGE} no aparece en $F"; exit 1; }
 
-          # Entre comillas: un SHA solo con dígitos/“e” podría interpretarse como número
+          # Entre comillas: un SHA solo con dígitos/"e" podría interpretarse como número
           sed -i -E "s|^(\s*newTag:)\s*[^ #]+|\1 \"${TAG}\"|" "$F"
           kubectl kustomize overlays/dev > /dev/null
 
