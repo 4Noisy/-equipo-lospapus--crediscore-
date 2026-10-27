@@ -18,7 +18,7 @@ permissions:
 
 env:
   IMAGE_NAME: crediscore
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.11"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ jobs:
       - name: Tests con cobertura
         run: |
           if [ -d tests ]; then
-            pytest --cov --cov-report=term-missing --cov-report=xml --cov-fail-under=70
+            python -m pytest --cov --cov-report=term-missing --cov-report=xml --cov-fail-under=70
           else
             echo "::warning::No existe carpeta tests/, se omiten los tests"
           fi
