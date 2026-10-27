@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Si llega un push nuevo a la misma rama, cancela la ejecución anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permisos mínimos por defecto (principio de mínimo privilegio)
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: crediscore
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) QUALITY: lint, formato, tests, seguridad. Corre en PRs y en pushes.
+  # ---------------------------------------------------------------------------
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Formato (ruff format)
+        run: ruff format --check .
+
+      - name: Tests con cobertura
+        run: |
+          if [ -d tests ]; then
+            python -m pytest --cov --cov-report=term-missing --cov-report=xml --cov-fail-under=70
+          else
+            echo "::warning::No existe carpeta tests/, se omiten los tests"
+          fi
+
+      - name: Análisis estático de seguridad (bandit)
+        run: |
+          if [ -d src ]; then bandit -r src -ll; else bandit -r . -ll --exclude ./tests,./.venv; fi
+
+      - name: Auditoría de dependencias (pip-audit)
+        run: |
+          if [ -f requirements.txt ]; then pip-audit -r requirements.txt; fi
+
+      - name: Subir reporte de cobertura
+        if: always() && hashFiles('coverage.xml') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ---------------------------------------------------------------------------
+  # 2) BUILD-AND-PUSH: construye la imagen UNA vez y la publica en GHCR.
+  #    Solo en push (nunca en PRs) y solo si quality pasó.
+  # ---------------------------------------------------------------------------
+  build-and-push:
+    name: build-and-push
+    needs: quality
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR exige minúsculas y nombres que empiecen con alfanumérico.
+      # El nombre del repo empieza con "-", así que usamos un nombre fijo.
+      - name: Calcular nombre de imagen
+        id: meta
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "image=ghcr.io/${OWNER}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build y push (tag inmutable = SHA del commit)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Escaneo de vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  # ---------------------------------------------------------------------------
+  # 3) PROMOTE: NO reconstruye. Re-etiqueta la imagen ya probada como
+  #    "stable"/"latest". Solo desde main y con aprobación manual del
+  #    environment "production".
+  # ---------------------------------------------------------------------------
+  promote:
+    name: promote
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promover imagen (retag por digest, sin rebuild)
+        run: |
+          IMAGE="${{ needs.build-and-push.outputs.image }}"
+          SRC="${IMAGE}:${{ github.sha }}"
+          docker buildx imagetools create --tag "${IMAGE}:stable" --tag "${IMAGE}:latest" "${SRC}"
+          echo "Promovida ${SRC} -> stable, latest" >> "$GITHUB_STEP_SUMMARY"
+          echo "Digest: ${{ needs.build-and-push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
