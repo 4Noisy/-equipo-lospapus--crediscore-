@@ -1,6 +1,6 @@
 # Herramientas de calidad usadas por .github/workflows/ci.yml
 # (separado de requirements.txt para que NO entren a la imagen de producción)
-ruff
+ruff==0.17.3   # fijado: una version nueva puede activar reglas nuevas y romper el CI
 pytest
 pytest-cov
 httpx          # requerido por TestClient de FastAPI

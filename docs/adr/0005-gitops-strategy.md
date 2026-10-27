@@ -24,7 +24,7 @@ Opciones evaluadas de herramienta GitOps: **Argo CD** y **Flux**.
 ## Decisión
 
 Adoptamos **GitOps pull-based con Argo CD** y un repo separado
-(`lospapus-gitops`) con estructura Kustomize: `base/` (los manifiestos de la
+(`gitops-repo`) con estructura Kustomize: `base/` (los manifiestos de la
 S07) y `overlays/{dev,prod}`.
 
 - El repo de la app contiene código, Dockerfile, tests y el pipeline CI.
