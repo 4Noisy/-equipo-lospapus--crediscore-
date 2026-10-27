@@ -53,3 +53,6 @@ El detalle por contenedor está en [managed-services.md](../arch/managed-service
 * **100% serverless (Lambda + DynamoDB + SQS):** los *cold starts* ponen en riesgo el p95 del camino síncrono, y DynamoDB no encaja con el modelo relacional y transaccional del core de créditos.
 * **Kubernetes autogestionado o Kafka en EC2:** regla del "sábado a las 3 PM"; el equipo no tiene un SRE dedicado para operar el clúster.
 * **Multi-cloud desde el día 1:** complejidad injustificada para un MVP. Queda como evolución futura (recuperación ante desastres), mitigada por Ports & Adapters.
+
+## Enmienda (2026-10-27)
+El [ADR 0006](0006-plataforma-k8s.md) cambia el orquestador de los microservicios: de ECS sobre Fargate a **Amazon EKS con perfiles de Fargate**. Se mantiene Fargate como cómputo y Lambda para los consumidores asíncronos. El descarte de "Kubernetes autogestionado" sigue vigente: con EKS el plano de control es gestionado y con Fargate no hay nodos que operar.

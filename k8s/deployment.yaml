@@ -53,9 +53,10 @@ spec:
               app.kubernetes.io/name: scoring-api
       containers:
         - name: api
-          # Tag inmutable por digest (slide S07 / futuro ADR de plataforma K8s):
-          # nunca :latest. Reemplazar por el digest real al publicar en GHCR.
-          image: ghcr.io/crediscore/scoring-api@sha256:0000000000000000000000000000000000000000000000000000000000000
+          # Imagen publicada por el CI con el SHA del commit; nunca :latest.
+          # El despliegue real sale de 4Noisy/gitops-repo (base/), donde cada
+          # overlay fija el tag.
+          image: ghcr.io/4noisy/scoring-api:487cef4d2db95238c6185519240835121e4001f2
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
