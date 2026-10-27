@@ -1,8 +1,10 @@
-# ADR 0004 argumentado: Plataforma de contenedores, Kubernetes e infraestructura como código
+# ADR 0006: Plataforma de contenedores, Kubernetes e infraestructura como código
 
 **Fecha:** 2026-10-15  
-**Estado:** Propuesto  
+**Estado:** Aceptado  
 **Relacionado con:** [ADR 0002](0002-estilo-arquitectonico.md), [ADR 0003](0003-cloud-style.md), [ADR 0004 de datos y eventos](0004-datos-y-eventos.md), [checklist 12-Factor](../12-factor-checklist.md), [servicios gestionados](../arch/managed-services.md), [Dockerfile](../../Dockerfile), [manifiestos K8s](../../k8s/), [Terraform](../../terraform/main.tf)
+
+> Numeración: se redactó en la S07 como "ADR 0004 argumentado". Se renumera a 0006 porque el 0004 es el de datos y eventos y el 0005 es la estrategia GitOps de la S08.
 
 
 ## Contexto

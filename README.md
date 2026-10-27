@@ -54,6 +54,8 @@ Reglas de trabajo, Definition of Done y política de IA: [CHARTER.md](CHARTER.md
 | **S04** — Cloud y 12-Factor | [Checklist 12-Factor](docs/12-factor-checklist.md) · [ADR 0003](docs/adr/0003-cloud-style.md) · [Servicios gestionados](docs/arch/managed-services.md) |
 | **S05** — APIs y OpenAPI | [Contrato OpenAPI 3.1](api/openapi.yaml) · [Reglas Spectral](.spectral.yaml) · [Ejemplos](api/examples/) · [Política de versionado](docs/api/versioning-policy.md) · [Cliente TypeScript](packages/api-client/) |
 | **S06** — Datos y eventos | [DER](docs/data/der.png) · [Catálogo de eventos](docs/data/event-catalog.md) · [Bounded contexts](docs/data/bounded-contexts.md) · [ADR 0004](docs/adr/0004-datos-y-eventos.md) |
+| **S07** — Contenedores, K8s e IaC | [Dockerfile](Dockerfile) · [Manifiestos K8s](k8s/) · [Terraform](terraform/main.tf) · [ADR 0006](docs/adr/0006-plataforma-k8s.md) |
+| **S08** — CI/CD y GitOps | [Pipeline CI](.github/workflows/ci.yml) · [Repo GitOps](https://github.com/4Noisy/gitops-repo) · [ADR 0005](docs/adr/0005-gitops-strategy.md) |
 
 Los diagramas C4 se editan en draw.io (`docs/c4/*.xml`) y el DER en PlantUML (`docs/data/der.puml`).
 
