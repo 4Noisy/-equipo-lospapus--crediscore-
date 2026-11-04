@@ -1,0 +1,28 @@
+# Configuración de gitleaks para CrediScore (S09 · secret scanning con historial).
+# Se EXTIENDE el set de reglas por defecto: no se desactiva ninguna regla.
+# Regla del taller: cada falso positivo se documenta aquí con su justificación
+# (nada de excepciones silenciosas). Para agregar una, abrir PR y explicar por qué.
+
+title = "CrediScore - gitleaks"
+
+[extend]
+useDefault = true
+
+# --- Falso positivo 1 -------------------------------------------------------
+# Los .http de api/examples/ usan UUIDs inventados como Idempotency-Key.
+# Son valores de ejemplo para el mock local (Prism, localhost:4010); no dan
+# acceso a nada. La rule generic-api-key los marca por su entropía.
+[[allowlists]]
+description = "UUIDs de ejemplo en Idempotency-Key (api/examples/*.http)"
+condition = "AND"
+paths = ['''^api/examples/.*\.http$''']
+regexTarget = "line"
+regexes = ['''(?i)idempotency-key:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''']
+
+# --- Falso positivo 2 -------------------------------------------------------
+# Un tag de imagen = SHA de commit (40 hex) en ghcr.io/4noisy/scoring-api.
+# El SHA es un identificador público e inmutable, no una credencial.
+[[allowlists]]
+description = "Tag de imagen ghcr.io/4noisy/scoring-api:<sha-de-commit>"
+regexTarget = "line"
+regexes = ['''ghcr\.io/4noisy/scoring-api[:@/\]\)`]*[0-9a-f]{40}''']
