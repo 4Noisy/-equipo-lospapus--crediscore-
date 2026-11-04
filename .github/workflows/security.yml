@@ -76,3 +76,25 @@ jobs:
             echo "- Config: \`.gitleaks.toml\` (reglas por defecto + falsos positivos justificados)"
             echo "- Si falla: **rotar el secreto primero**, limpiar el historial después. Ver \`docs/security/secret-scanning.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  sast:
+    name: sast (Semgrep, reglas propias)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Semgrep
+        run: pip install semgrep
+
+      # Verifica que cada regla propia detecte lo que debe (casos ruleid / ok).
+      - name: Tests de las reglas propias
+        run: semgrep --test --config .semgrep/ tests/semgrep/
+
+      # Bloqueante: --error falla el job si hay hallazgos.
+      - name: Escaneo SAST
+        run: semgrep scan --config p/owasp-top-ten --config .semgrep/ --error .
