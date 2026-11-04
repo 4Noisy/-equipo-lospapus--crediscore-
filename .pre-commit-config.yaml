@@ -1,0 +1,8 @@
+# Primera línea de defensa: bloquea el secreto ANTES de que llegue a un commit.
+# Instalación (una vez por clon):  pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+        args: ["--config=.gitleaks.toml"]
