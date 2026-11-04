@@ -56,8 +56,32 @@ Reglas de trabajo, Definition of Done y política de IA: [CHARTER.md](CHARTER.md
 | **S06** — Datos y eventos | [DER](docs/data/der.png) · [Catálogo de eventos](docs/data/event-catalog.md) · [Bounded contexts](docs/data/bounded-contexts.md) · [ADR 0004](docs/adr/0004-datos-y-eventos.md) |
 | **S07** — Contenedores, K8s e IaC | [Dockerfile](Dockerfile) · [Manifiestos K8s](k8s/) · [Terraform](terraform/main.tf) · [ADR 0006](docs/adr/0006-plataforma-k8s.md) |
 | **S08** — CI/CD y GitOps | [Pipeline CI](.github/workflows/ci.yml) · [Repo GitOps](https://github.com/4Noisy/gitops-repo) · [ADR 0005](docs/adr/0005-gitops-strategy.md) · [Evidencia](docs/s08/evidencia.md) |
+| **S09** — DevSecOps I | [Workflow de seguridad](.github/workflows/security.yml) · [Reglas Semgrep](.semgrep/) · [Threat model STRIDE](docs/threat-model.md) · [Secret scanning](docs/security/secret-scanning.md) · [Triage y excepciones](#seguridad-triage-y-excepciones-vex) |
 
 Los diagramas C4 se editan en draw.io (`docs/c4/*.xml`) y el DER en PlantUML (`docs/data/der.puml`).
+
+---
+
+### Seguridad: triage y excepciones (VEX)
+Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneDX) y **secrets** (gitleaks). Si un check falla, el PR no se mergea.
+
+**1. Re-triar un hallazgo.** No se decide solo por CVSS. Se pregunta:
+- ¿Es alcanzable? ¿Se llama a la función vulnerable o se llega desde la red pública?
+- ¿Qué dato expone? En CrediScore, RUT, datos financieros y KYC son críticos.
+- ¿Hay parche? Trivy ya ignora los CVE sin versión corregida (`ignore-unfixed`).
+
+**2. Plazos de remediación (SLA).** Critical < 7 días · High < 30 días · Medium < 90 días.
+
+**3. Pedir una excepción.** Siempre por PR, con la justificación escrita y las 2 aprobaciones de la rama protegida. Nada de excepciones silenciosas.
+
+| Herramienta | Dónde se declara | Qué debe decir |
+| :--- | :--- | :--- |
+| Trivy (SCA) | `.trivyignore` en la raíz (Trivy lo lee solo) | CVE, por qué no aplica (estado VEX: `not_affected` + motivo), fecha de revisión |
+| Semgrep (SAST) | Regla propia: PR que corrige la regla en `.semgrep/` y su test en `tests/semgrep/`. Regla pública: `# nosemgrep: <id>` en la línea | Por qué es falso positivo |
+| gitleaks | `[[allowlists]]` en `.gitleaks.toml` | Por qué el valor no es un secreto. Si era real: **rotarlo primero** ([guía](docs/security/secret-scanning.md)) |
+| Bandit | `# nosec <id>` en la línea | Motivo en el mismo comentario. Ej.: `src/main.py` escucha en `0.0.0.0` (`B104`) porque corre en un contenedor |
+
+**4. VEX formal.** Si el cliente o un auditor pide la declaración en formato estándar, la excepción de Trivy se escribe como documento OpenVEX y se pasa a Trivy con `--vex`. El SBOM CycloneDX del run (artefacto `sbom-cyclonedx`) sirve para revisar si un CVE nuevo nos afecta, incluso en dependencias transitivas.
 
 ---
 

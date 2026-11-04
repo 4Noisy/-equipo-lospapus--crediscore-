@@ -2,7 +2,7 @@
 
 Equipo lospapus · Versión 1.0 · 4 de noviembre de 2026
 
-STRIDE aplicado al microservicio **Scoring Engine** (`scoring-api`) de CrediScore: 17 amenazas en las 6 categorías, 9 de prioridad alta y 6 brechas abiertas en el código y la configuración de hoy. Está contrastado con `src/main.py`, `k8s/`, `ci.yml`, `api/openapi.yaml` y los ADR 0002–0006, y queda listo para `docs/threat-model.md`.
+STRIDE aplicado al microservicio **Scoring Engine** (`scoring-api`) de CrediScore: 17 amenazas en las 6 categorías, 9 de prioridad alta y 6 brechas abiertas en el código y la configuración de hoy. Está contrastado con `src/main.py`, `k8s/`, `ci.yml`, `api/openapi.yaml` y los ADR 0002–0006.
 
 ## 1. Alcance
 
