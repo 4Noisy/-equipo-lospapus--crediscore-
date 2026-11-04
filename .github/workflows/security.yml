@@ -1,8 +1,8 @@
 name: security
 
 # S09 · DevSecOps I. Este archivo reúne los jobs de seguridad del equipo.
-# Aquí está el job `secrets` (secret scanning con historial completo).
-# Los jobs `sast` y `sca` de los demás integrantes se agregan debajo, en paralelo.
+# Jobs: `sca` (Trivy + SBOM) y `secrets` (secret scanning con historial completo).
+# El job `sast` se agrega debajo, en paralelo.
 
 on:
   pull_request:
@@ -22,8 +22,73 @@ permissions:
 
 env:
   GITLEAKS_VERSION: "8.28.0"
+  PYTHON_VERSION: "3.11" # misma versión que ci.yml y el Dockerfile
+  CYCLONEDX_BOM_VERSION: "8.0.1"
 
 jobs:
+  sca:
+    name: sca (Trivy + SBOM CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # El SBOM se genera desde el entorno ya instalado, no desde requirements.txt:
+      # requirements.txt fija 3 dependencias directas, pero al instalarlas llegan ~15
+      # (pydantic, anyio, h11...). Un CVE en una transitiva solo se ve en este SBOM.
+      - name: Generar SBOM CycloneDX (directas + transitivas)
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/app
+          /tmp/app/bin/pip install -q -r requirements.txt
+          pip install -q "cyclonedx-bom==${CYCLONEDX_BOM_VERSION}"
+          # cyclonedx-py valida el JSON contra el esquema CycloneDX y falla si no es válido.
+          cyclonedx-py environment /tmp/app/bin/python --of JSON -o sbom.json
+
+      - name: Subir SBOM como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
+          retention-days: 90 # máximo de GitHub
+
+      # Gate 1: dependencias declaradas en el repo (requirements.txt y otros manifiestos).
+      # Falla en HIGH/CRITICAL solo si ya existe versión con parche (ignore-unfixed).
+      - name: Trivy filesystem (dependencias declaradas)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      # Gate 2: el SBOM completo, para cubrir las transitivas que requirements.txt no lista.
+      - name: Trivy sobre el SBOM (incluye transitivas)
+        if: always() && hashFiles('sbom.json') != ''
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: sbom
+          scan-ref: sbom.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Resumen
+        if: always() && hashFiles('sbom.json') != ''
+        run: |
+          {
+            echo "### SCA (Trivy) + SBOM"
+            echo "- SBOM CycloneDX: $(jq '.components | length' sbom.json) componentes (artefacto \`sbom-cyclonedx\`)"
+            echo "- Gate: falla en HIGH/CRITICAL con parche disponible (\`ignore-unfixed\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   secrets:
     name: secrets (gitleaks, historial completo)
     runs-on: ubuntu-latest
