@@ -76,3 +76,87 @@ jobs:
             echo "- Config: \`.gitleaks.toml\` (reglas por defecto + falsos positivos justificados)"
             echo "- Si falla: **rotar el secreto primero**, limpiar el historial después. Ver \`docs/security/secret-scanning.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # SAST: análisis estático del código de la API (Semgrep)
+  # Reglas públicas (OWASP, Python, Kubernetes) + reglas propias en .semgrep/
+  # Reporta todo; bloquea el merge solo si hay hallazgos de severidad ERROR.
+  # Regla del taller: un falso positivo se corrige con un PR a la regla, no con nosec.
+  # ---------------------------------------------------------------------------
+  sast:
+    name: sast (semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # TODO: fijar la versión exacta de semgrep tras la primera corrida verde
+      # (igual que gitleaks arriba), p. ej. "semgrep==X.Y.Z".
+      - name: Instalar semgrep
+        run: |
+          set -euo pipefail
+          pip install "semgrep>=1.0,<2.0"
+          semgrep --version
+
+      # Sin --error: aquí solo se genera el reporte completo (ERROR y WARNING).
+      - name: Escaneo SAST
+        run: |
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/python \
+            --config p/kubernetes \
+            --config .semgrep/ \
+            --metrics off \
+            --sarif-output semgrep.sarif
+
+      - name: Subir reporte (SARIF)
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep.sarif
+          retention-days: 30
+
+      # Gate bloqueante: falla solo con severidad ERROR. Los WARNING quedan en el resumen.
+      - name: Gate (bloquear si hay hallazgos ERROR)
+        run: |
+          set -euo pipefail
+          ERRORS=$(jq '[.runs[].results[] | select(.level=="error")] | length' semgrep.sarif)
+          WARNINGS=$(jq '[.runs[].results[] | select(.level=="warning")] | length' semgrep.sarif)
+          {
+            echo "### SAST (semgrep)"
+            echo "- Hallazgos ERROR (bloquean): **${ERRORS}**"
+            echo "- Hallazgos WARNING (revisar): **${WARNINGS}**"
+            echo "- Reglas: OWASP Top 10, Python, Kubernetes y \`.semgrep/\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::Semgrep encontró ${ERRORS} hallazgo(s) ERROR. Corrige el código o la regla (PR), sin nosec."
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Contrato OpenAPI: lint de seguridad con reglas OWASP API Top 10 (Spectral)
+  # ---------------------------------------------------------------------------
+  contract:
+    name: contract (openapi + owasp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # TODO: fijar versiones exactas de spectral tras la primera corrida verde.
+      - name: Spectral lint
+        run: |
+          set -euo pipefail
+          OPENAPI=$(find . -name 'openapi.yaml' -not -path './node_modules/*' | head -1)
+          test -n "$OPENAPI" || { echo "::error::No se encontró openapi.yaml"; exit 1; }
+          npm install --no-save @stoplight/spectral-cli @stoplight/spectral-owasp-ruleset
+          npx spectral lint "$OPENAPI" --ruleset .spectral.yaml --fail-severity=error
