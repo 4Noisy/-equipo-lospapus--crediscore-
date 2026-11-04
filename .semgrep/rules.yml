@@ -1,0 +1,42 @@
+rules:
+  - id: py-hardcoded-jwt-secret
+    message: "JWT secret hardcodeado. Usa una variable de entorno."
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: jwt.encode(..., "$SECRET", ...)
+      - metavariable-regex:
+          metavariable: "$SECRET"
+          regex: '^[A-Za-z0-9_-]{10,}$'
+    fix: jwt.encode(..., os.environ["JWT_SECRET"], ...)
+
+  - id: py-sql-fstring-injection
+    message: "Query SQL armada con f-string, concatenación o format (riesgo de SQLi). Usa consultas parametrizadas."
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $CURSOR.execute(f"...", ...)
+      - pattern: $CURSOR.execute("..." + $X, ...)
+      - pattern: $CURSOR.execute("...".format(...), ...)
+
+  - id: py-unsafe-model-deserialization
+    message: "Deserializar con pickle/joblib permite ejecución de código arbitrario si el artefacto no es de confianza. Valida origen y hash del modelo."
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: joblib.load(...)
+
+  - id: py-sensitive-data-in-logs
+    message: "Dato sensible (RUT, password, token) escrito en logs. Enmascara o elimina el valor (requisito de auditoría CMF)."
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: $LOGGER.$M(f"...{$X}...", ...)
+      - metavariable-regex:
+          metavariable: $LOGGER
+          regex: '(?i)^(log|logger|logging)$'
+      - metavariable-regex:
+          metavariable: $X
+          regex: '(?i).*(rut|password|passwd|token|secret).*'
