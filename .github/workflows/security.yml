@@ -167,6 +167,12 @@ jobs:
           pip install "semgrep>=1.0,<2.0"
           semgrep --version
 
+      # Tests de las reglas propias: cada `# ruleid:` debe disparar y cada `# ok:` no.
+      # Los archivos van explícitos: con carpetas (`--config .semgrep/ tests/semgrep/`)
+      # semgrep no empareja regla y test, dice "No unit tests found" y sale en verde sin probar nada.
+      - name: Tests de las reglas propias
+        run: semgrep --test --config .semgrep/rules.yml tests/semgrep/rules.py
+
       # Sin --error: aquí solo se genera el reporte completo (ERROR y WARNING).
       - name: Escaneo SAST
         run: |
