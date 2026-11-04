@@ -208,7 +208,8 @@ def get_credit_application_decision(application_id: uuid.UUID):
 if __name__ == "__main__":
     uvicorn.run(
         app,
-        host="0.0.0.0",  # nosec B104 (contenedor)
+        # Escucha en todas las interfaces porque corre dentro de un contenedor.
+        host="0.0.0.0",  # nosec B104
         port=int(os.getenv("APP_PORT", "8080")),
         timeout_graceful_shutdown=25,
     )
