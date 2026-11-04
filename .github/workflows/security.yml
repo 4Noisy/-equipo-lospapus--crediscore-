@@ -1,0 +1,78 @@
+name: security
+
+# S09 · DevSecOps I. Este archivo reúne los jobs de seguridad del equipo.
+# Aquí está el job `secrets` (secret scanning con historial completo).
+# Los jobs `sast` y `sca` de los demás integrantes se agregan debajo, en paralelo.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1" # lunes 09:00 UTC: re-escaneo semanal (reglas nuevas de gitleaks)
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: "8.28.0"
+
+jobs:
+  secrets:
+    name: secrets (gitleaks, historial completo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 trae TODOS los commits y ramas. Sin esto el clon es
+      # superficial (1 commit) y un secreto borrado después no se detectaría.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar gitleaks (versión fijada + checksum)
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          TAR="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$TAR" "${BASE}/${TAR}"
+          curl -sSfL -o checksums.txt "${BASE}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c checksums.txt
+          tar -xzf "$TAR" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      # Escanea el historial de todas las ramas (no solo el rango del PR).
+      # Falla (exit 1) si hay hallazgos no justificados en .gitleaks.toml.
+      - name: Escaneo del historial completo
+        run: |
+          gitleaks git . \
+            --config .gitleaks.toml \
+            --log-opts="--all" \
+            --redact \
+            --report-format sarif \
+            --report-path gitleaks-report.sarif \
+            --verbose
+
+      - name: Subir reporte (SARIF)
+        if: always() && hashFiles('gitleaks-report.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.sarif
+          retention-days: 30
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Secret scanning (gitleaks ${GITLEAKS_VERSION})"
+            echo "- Alcance: historial completo, todas las ramas (\`--log-opts=--all\`)"
+            echo "- Config: \`.gitleaks.toml\` (reglas por defecto + falsos positivos justificados)"
+            echo "- Si falla: **rotar el secreto primero**, limpiar el historial después. Ver \`docs/security/secret-scanning.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"
