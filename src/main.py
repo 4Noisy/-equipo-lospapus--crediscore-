@@ -92,6 +92,11 @@ async def trace_id_middleware(request: Request, call_next):
     request.state.trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
     response = await call_next(request)
     response.headers.setdefault("X-Trace-Id", request.state.trace_id)
+    # Headers de seguridad (S10, los revisa el DAST con ZAP):
+    # no adivinar el tipo de contenido, no cachear datos financieros, no embeber en iframes.
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Cache-Control", "no-store")
+    response.headers.setdefault("X-Frame-Options", "DENY")
     return response
 
 
@@ -212,4 +217,5 @@ if __name__ == "__main__":
         host="0.0.0.0",  # nosec B104
         port=int(os.getenv("APP_PORT", "8080")),
         timeout_graceful_shutdown=25,
+        server_header=False,  # no anunciar "uvicorn" en cada respuesta
     )

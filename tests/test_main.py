@@ -52,6 +52,13 @@ def test_trace_id_se_propaga():
     assert r.headers["X-Trace-Id"] == "abc123"
 
 
+def test_headers_de_seguridad():
+    r = client.get("/health")
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    assert r.headers["Cache-Control"] == "no-store"
+    assert r.headers["X-Frame-Options"] == "DENY"
+
+
 def test_idempotencia_misma_key_mismo_cuerpo():
     key = str(uuid.uuid4())
     body = payload()
