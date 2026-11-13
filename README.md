@@ -57,13 +57,14 @@ Reglas de trabajo, Definition of Done y política de IA: [CHARTER.md](CHARTER.md
 | **S07** — Contenedores, K8s e IaC | [Dockerfile](Dockerfile) · [Manifiestos K8s](k8s/) · [Terraform](terraform/main.tf) · [ADR 0006](docs/adr/0006-plataforma-k8s.md) |
 | **S08** — CI/CD y GitOps | [Pipeline CI](.github/workflows/ci.yml) · [Repo GitOps](https://github.com/4Noisy/gitops-repo) · [ADR 0005](docs/adr/0005-gitops-strategy.md) · [Evidencia](docs/s08/evidencia.md) |
 | **S09** — DevSecOps I | [Workflow de seguridad](.github/workflows/security.yml) · [Reglas Semgrep](.semgrep/) · [Threat model STRIDE](docs/threat-model.md) · [Secret scanning](docs/security/secret-scanning.md) · [Triage y excepciones](#seguridad-triage-y-excepciones-vex) |
+| **S10** — DevSecOps II (supply chain) | [Firma y SLSA en el CI](.github/workflows/ci.yml) · [Pruebas de admisión y runtime](.github/workflows/supply-chain.yml) · [ADR 0007](docs/adr/0007-supply-chain.md) · [Policy Kyverno](k8s/policies/require-signature.yaml) · [Reglas Falco](falco/) · [Evidencia](docs/s10/evidencia.md) |
 
 Los diagramas C4 se editan en draw.io (`docs/c4/*.xml`) y el DER en PlantUML (`docs/data/der.puml`).
 
 ---
 
 ### Seguridad: triage y excepciones (VEX)
-Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneDX) y **secrets** (gitleaks). Si un check falla, el PR no se mergea.
+Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneDX), **secrets** (gitleaks), **iac** (Checkov), **container-scan** (Trivy sobre la imagen) y **dast** (OWASP ZAP). Además, `supply-chain.yml` prueba la policy de Kyverno y las reglas de Falco. Si un check falla, el PR no se mergea.
 
 **1. Re-triar un hallazgo.** No se decide solo por CVSS. Se pregunta:
 - ¿Es alcanzable? ¿Se llama a la función vulnerable o se llega desde la red pública?
@@ -80,6 +81,9 @@ Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneD
 | Semgrep (SAST) | Regla propia: PR que corrige la regla en `.semgrep/` y su test en `tests/semgrep/`. Regla pública: `# nosemgrep: <id>` en la línea | Por qué es falso positivo |
 | gitleaks | `[[allowlists]]` en `.gitleaks.toml` | Por qué el valor no es un secreto. Si era real: **rotarlo primero** ([guía](docs/security/secret-scanning.md)) |
 | Bandit | `# nosec <id>` en la línea | Motivo en el mismo comentario. Ej.: `src/main.py` escucha en `0.0.0.0` (`B104`) porque corre en un contenedor |
+| Checkov (IaC) | Anotación `checkov.io/skipN: <ID>=<motivo>` en el recurso de `k8s/` | Por qué no aplica. Ej.: `CKV_K8S_43` en el Deployment, porque Kyverno fija el digest al admitir |
+| ZAP (DAST) | Línea `<id>	IGNORE	<motivo>` en `.zap/rules.tsv` | Por qué la alerta no es explotable en esta API |
+| Kyverno | No hay excepciones: una imagen sin firma del CI de `main` no entra | Si hace falta una imagen externa, se agrega su firma a la policy por PR |
 
 **4. VEX formal.** Si el cliente o un auditor pide la declaración en formato estándar, la excepción de Trivy se escribe como documento OpenVEX y se pasa a Trivy con `--vex`. El SBOM CycloneDX del run (artefacto `sbom-cyclonedx`) sirve para revisar si un CVE nuevo nos afecta, incluso en dependencias transitivas.
 

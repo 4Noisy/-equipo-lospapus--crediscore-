@@ -1,0 +1,44 @@
+# S10 · Reglas Falco propias de CrediScore (detección en runtime).
+# Usan las macros de las reglas por defecto de Falco (spawned_process, open_write,
+# outbound), así que se cargan después de falco_rules.yaml.
+# Ruta de alerta y por qué cada regla: falco/README.md.
+
+- macro: scoring_api
+  condition: (container.image.repository endswith "/scoring-api")
+
+# 1. La imagen es distroless: no trae shell. Si aparece un shell u otro programa
+#    que no sea python3, alguien metió un binario en el contenedor.
+- rule: CrediScore - Shell o proceso inesperado en scoring-api
+  desc: Se ejecutó dentro de scoring-api un proceso distinto de python3
+  condition: spawned_process and scoring_api and not proc.name startswith "python3"
+  output: >
+    Proceso inesperado en scoring-api (proceso=%proc.name cmdline=%proc.cmdline
+    usuario=%user.name contenedor=%container.name imagen=%container.image.repository)
+  priority: CRITICAL
+  tags: [crediscore, container, shell, mitre_execution]
+
+# 2. La API no escribe archivos: todo vive en memoria y en /tmp.
+#    Escribir en otro lado es señal de persistencia o de manipulación del código.
+- rule: CrediScore - Escritura fuera de /tmp en scoring-api
+  desc: scoring-api abrió para escritura un archivo fuera de /tmp
+  condition: >
+    open_write and scoring_api
+    and not fd.name startswith /tmp/
+    and not fd.name startswith /dev/
+    and not fd.name startswith /proc/self/
+  output: >
+    Escritura inesperada en scoring-api (archivo=%fd.name proceso=%proc.name
+    contenedor=%container.name imagen=%container.image.repository)
+  priority: ERROR
+  tags: [crediscore, filesystem, mitre_persistence]
+
+# 3. La API no llama a servicios externos. Una conexión hacia Internet puede ser
+#    exfiltración de datos de clientes (RUT, montos) o un reverse shell.
+- rule: CrediScore - Conexion saliente inesperada desde scoring-api
+  desc: scoring-api abrió una conexión hacia una IP pública
+  condition: outbound and scoring_api
+  output: >
+    Conexion saliente desde scoring-api (destino=%fd.name proceso=%proc.name
+    contenedor=%container.name imagen=%container.image.repository)
+  priority: CRITICAL
+  tags: [crediscore, network, mitre_exfiltration]
