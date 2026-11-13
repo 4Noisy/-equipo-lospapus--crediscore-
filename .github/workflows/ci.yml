@@ -79,7 +79,8 @@ jobs:
   build-and-push:
     name: build-and-push
     needs: quality
-    if: github.event_name == 'push'
+    # push a main/develop o ejecución manual (para probar una rama); nunca en PRs
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -129,13 +130,101 @@ jobs:
           exit-code: "1"
 
   # ---------------------------------------------------------------------------
-  # 3) PROMOTE (GitOps): NO toca el clúster. Edita el repo gitops-repo:
+  # 3) SIGN-AND-ATTEST (S10): firma la imagen y le adjunta su "certificado de origen".
+  #    - Firma keyless: GitHub entrega un token OIDC y Sigstore emite un certificado
+  #      de 10 minutos a nombre de ESTE workflow. No hay llave privada que cuidar.
+  #    - Attestation SLSA: un JSON que dice qué repo, qué commit y qué workflow
+  #      construyeron la imagen. También queda firmado y guardado junto a la imagen.
+  #    - Al final verifica las dos cosas con cosign verify.
+  # ---------------------------------------------------------------------------
+  sign-and-attest:
+    name: sign-and-attest
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write # subir firma y attestation a GHCR
+      id-token: write # pedir el token OIDC para la firma keyless
+    env:
+      # Siempre por digest: firmar un tag no sirve, el tag se puede mover
+      IMAGE: ${{ needs.build-and-push.outputs.image }}@${{ needs.build-and-push.outputs.digest }}
+      # Quién debe aparecer en el certificado: este workflow en esta rama
+      IDENTITY: ${{ github.server_url }}/${{ github.workflow_ref }}
+      ISSUER: https://token.actions.githubusercontent.com
+    steps:
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+        with:
+          cosign-release: v2.6.1
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Firmar la imagen (Cosign keyless)
+        run: cosign sign --yes "$IMAGE"
+
+      - name: Crear la provenance SLSA (qué, quién y desde dónde se construyó)
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}
+        run: |
+          jq -n \
+            --arg builder "$IDENTITY" \
+            --arg repo "git+${REPO_URL}@${GITHUB_REF}" \
+            --arg sha "$GITHUB_SHA" \
+            --arg run "$RUN_URL" \
+            --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              builder: { id: $builder },
+              buildType: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/adr/0007-supply-chain.md",
+              invocation: {
+                configSource: { uri: $repo, digest: { sha1: $sha }, entryPoint: ".github/workflows/ci.yml" }
+              },
+              metadata: {
+                buildInvocationId: $run,
+                buildFinishedOn: $now,
+                completeness: { parameters: true, environment: false, materials: true },
+                reproducible: false
+              },
+              materials: [ { uri: $repo, digest: { sha1: $sha } } ]
+            }' > provenance.json
+          cat provenance.json
+
+      - name: Adjuntar la attestation SLSA a la imagen
+        run: cosign attest --yes --type slsaprovenance --predicate provenance.json "$IMAGE"
+
+      - name: Verificar firma y attestation (cosign verify)
+        run: |
+          set -euo pipefail
+          echo "== cosign verify =="
+          cosign verify --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$IMAGE" \
+            | jq '.[0].optional | {Subject, Issuer, githubWorkflowRef, githubWorkflowSha}'
+          echo "== cosign verify-attestation (slsaprovenance) =="
+          cosign verify-attestation --type slsaprovenance \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$IMAGE" \
+            | jq -r '.payload' | base64 -d | jq '{predicateType, builder: .predicate.builder.id, commit: .predicate.materials[0].digest.sha1}'
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Firma y SLSA"
+            echo "- Imagen: \`${IMAGE}\`"
+            echo "- Firmada por: \`${IDENTITY}\`"
+            echo "- \`cosign verify\` y \`cosign verify-attestation\`: OK"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # 4) PROMOTE (GitOps): NO toca el clúster. Edita el repo gitops-repo:
   #    - dev  -> commit directo a main; Argo CD sincroniza solo.
   #    - prod -> Pull Request (requiere revisión humana antes de mergear).
   # ---------------------------------------------------------------------------
   promote:
     name: promote
-    needs: build-and-push
+    # Solo se promueve una imagen firmada y verificada
+    needs: [build-and-push, sign-and-attest]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -211,7 +300,7 @@ jobs:
           Commit origen: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${TAG}
           Pipeline: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 
-          Ya pasó quality, build y escaneo Trivy. Requiere revisión antes de mergear."
+          Ya pasó quality, build, escaneo Trivy y quedó firmada (Cosign + SLSA). Requiere revisión antes de mergear."
 
           if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" = "0" ]; then
             gh pr create --base main --head "$BRANCH" --title "$TITLE" --body "$BODY"
