@@ -97,6 +97,7 @@ async def trace_id_middleware(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
     return response
 
 
