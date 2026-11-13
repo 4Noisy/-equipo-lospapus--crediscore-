@@ -53,7 +53,12 @@ jobs:
       - name: Aplicar namespace y policy
         run: |
           kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/policies/require-signature.yaml
+          # El webhook de Kyverno tarda unos segundos más que el Deployment en aceptar conexiones
+          for i in $(seq 1 24); do
+            kubectl apply -f k8s/policies/require-signature.yaml && break
+            echo "Kyverno aún no responde, reintento en 5 s ($i/24)"
+            sleep 5
+          done
           kubectl wait clusterpolicy require-image-signature --for=condition=Ready --timeout=120s
 
       - name: "Prueba 1: imagen firmada por el CI de main -> ADMITIDA"
