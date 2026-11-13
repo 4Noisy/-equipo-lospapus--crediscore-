@@ -89,6 +89,26 @@ jobs:
             echo "- Gate: falla en HIGH/CRITICAL con parche disponible (\`ignore-unfixed\`)"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # ---------------------------------------------------------------------------
+  # IaC scan (S10): Checkov revisa Terraform y los manifiestos de Kubernetes
+  # antes de aplicarlos. Si encuentra algo mal configurado, el PR no pasa.
+  # Excepciones: anotación checkov.io/skipN en el recurso, con el motivo escrito.
+  # ---------------------------------------------------------------------------
+  iac:
+    name: iac (checkov)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Checkov (terraform/ y k8s/)
+        uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
+        with:
+          directory: .
+          framework: terraform,kubernetes
+          soft_fail: false
+          quiet: true
+
   secrets:
     name: secrets (gitleaks, historial completo)
     runs-on: ubuntu-latest
