@@ -22,7 +22,7 @@ permissions:
 
 env:
   GITLEAKS_VERSION: "8.28.0"
-  PYTHON_VERSION: "3.11" # misma versión que ci.yml y el Dockerfile
+  PYTHON_VERSION: "3.13" # misma versión que ci.yml y el Dockerfile
   CYCLONEDX_BOM_VERSION: "8.0.1"
 
 jobs:
