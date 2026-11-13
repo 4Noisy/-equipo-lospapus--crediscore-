@@ -1,0 +1,34 @@
+# Red mínima para scoring-api (S10, la pide Checkov CKV2_K8S_6).
+# Entrada: solo el ingress controller (namespace ingress-nginx) al puerto 8080.
+# Salida: solo DNS. La API guarda todo en memoria y no llama a servicios externos;
+# cualquier otra conexión saliente queda bloqueada (y Falco la alerta, ver falco/).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scoring-api
+  namespace: crediscore
+  labels:
+    app.kubernetes.io/name: scoring-api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: scoring-api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
