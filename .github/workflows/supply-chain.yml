@@ -1,0 +1,137 @@
+name: supply-chain
+
+# S10 · Prueba en vivo de los controles de admisión y runtime.
+#   admission: un cluster kind con Kyverno comprueba que la imagen firmada por el
+#              CI de main entra y que una imagen sin firma se rechaza.
+#   runtime:   Falco con nuestras 3 reglas vigila la API y simulamos los 3 ataques
+#              (shell, escritura, conexión saliente). Cada uno debe generar su alerta.
+# Imagen probada: la de main. En un PR, la de la rama base; después de cada CI
+# verde en main, la recién firmada.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_REPO: ghcr.io/4noisy/scoring-api
+  # Commit de main cuya imagen se prueba (ver comentario de arriba)
+  MAIN_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.base.sha || github.sha }}
+  # Imagen vieja (S08) que nunca se firmó: debe ser rechazada
+  UNSIGNED_IMAGE: ghcr.io/4noisy/scoring-api:487cef4d2db95238c6185519240835121e4001f2
+  KYVERNO_VERSION: v1.19.2
+  FALCO_IMAGE: falcosecurity/falco:0.45.2
+
+jobs:
+  admission:
+    name: admission (kyverno)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Crear cluster kind
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+
+      - name: Instalar Kyverno
+        run: |
+          kubectl create -f "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/install.yaml"
+          kubectl -n kyverno wait deploy --all --for=condition=Available --timeout=300s
+
+      - name: Aplicar namespace y policy
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/policies/require-signature.yaml
+          kubectl wait clusterpolicy require-image-signature --for=condition=Ready --timeout=120s
+
+      - name: "Prueba 1: imagen firmada por el CI de main -> ADMITIDA"
+        run: |
+          set -euo pipefail
+          kubectl -n crediscore run firmada --image="${IMAGE_REPO}:${MAIN_SHA}" --restart=Never
+          echo "Imagen final del Pod (Kyverno la fija por digest):"
+          kubectl -n crediscore get pod firmada -o jsonpath='{.spec.containers[0].image}{"\n"}'
+
+      - name: "Prueba 2: imagen sin firma -> RECHAZADA"
+        run: |
+          if kubectl -n crediscore run sin-firma --image="$UNSIGNED_IMAGE" --restart=Never 2> error.txt; then
+            echo "::error::Kyverno dejó entrar una imagen sin firma"
+            exit 1
+          fi
+          cat error.txt
+          grep -q "require-image-signature" error.txt
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Admisión (Kyverno)"
+            echo "- Firmada \`${IMAGE_REPO}:${MAIN_SHA:0:7}\`: **admitida**"
+            echo "- Sin firma \`${UNSIGNED_IMAGE##*:}\` (S08): **rechazada**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  runtime:
+    name: runtime (falco)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Levantar Falco con nuestras reglas
+        run: |
+          docker run -d --name falco --privileged \
+            -v /var/run/docker.sock:/host/var/run/docker.sock \
+            -v /proc:/host/proc:ro -v /etc:/host/etc:ro \
+            -v "$PWD/falco/rules-custom.yaml:/etc/falco/rules.d/crediscore.yaml:ro" \
+            "$FALCO_IMAGE" falco -o json_output=true
+          # Falco valida las reglas al arrancar: si una está mal escrita, se cae aquí
+          for i in $(seq 1 60); do
+            docker logs falco 2>&1 | grep -q "Starting health webserver\|Enabled event sources" && break
+            sleep 2
+          done
+          sleep 5
+          docker ps --filter name=falco --format '{{.Status}}' | grep -q Up || { docker logs falco; exit 1; }
+          docker logs falco 2>&1 | grep -i "crediscore\|rules" | head -20
+
+      - name: Levantar la API
+        run: |
+          docker run -d --name api "${IMAGE_REPO}:${MAIN_SHA}"
+          sleep 5
+
+      - name: Simular los 3 ataques
+        run: |
+          # 1. "Shell": copiamos el binario de python como /tmp/sh y lo ejecutamos
+          docker exec api python3 -c "import shutil,os; shutil.copy('/usr/bin/python3.11','/tmp/sh'); os.chmod('/tmp/sh',0o755)"
+          docker exec api /tmp/sh -c "print('hola desde un shell falso')"
+          # 2. Escribir fuera de /tmp
+          docker exec api python3 -c "open('/home/nonroot/puerta-trasera.txt','w').write('x')"
+          # 3. Conexión saliente a Internet
+          docker exec api python3 -c "import socket; socket.create_connection(('1.1.1.1', 443), 5).close()"
+          sleep 5
+
+      - name: Comprobar que Falco alertó los 3
+        run: |
+          docker logs falco 2>/dev/null | grep '"rule":"CrediScore' > alertas.json || true
+          jq -r '"\(.priority) | \(.rule) | \(.output)"' alertas.json
+          ok=0
+          for r in "Shell o proceso inesperado" "Escritura fuera de /tmp" "Conexion saliente inesperada"; do
+            if grep -q "$r" alertas.json; then echo "OK: $r"; else echo "::error::Falco no alertó: $r"; ok=1; fi
+          done
+          {
+            echo "### Runtime (Falco)"
+            echo "| Prioridad | Regla |"
+            echo "| --- | --- |"
+            jq -r '"| \(.priority) | \(.rule) |"' alertas.json | sort -u
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $ok

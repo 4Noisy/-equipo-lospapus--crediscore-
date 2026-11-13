@@ -1,0 +1,53 @@
+# S10 · Policy de admisión (Kyverno).
+# En el namespace crediscore solo entran Pods cuyas imágenes estén:
+#   1. firmadas con Cosign por el workflow ci.yml de la rama main (firma keyless), y
+#   2. acompañadas de una attestation SLSA provenance construida por ese mismo workflow.
+# Cualquier otra imagen (subida a mano, de otra rama, sin firma) se rechaza.
+# No va en kustomization.yaml: es un recurso de todo el cluster y necesita Kyverno instalado.
+# Se prueba sola en .github/workflows/supply-chain.yml (job admission).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-signature
+  annotations:
+    policies.kyverno.io/title: Exigir imagen firmada y con SLSA
+    policies.kyverno.io/description: >-
+      Rechaza Pods en crediscore si su imagen no está firmada por el CI de main
+      o no tiene attestation SLSA. Ver docs/adr/0007-supply-chain.md.
+spec:
+  webhookTimeoutSeconds: 30
+  background: false
+  rules:
+    - name: firma-y-slsa-del-ci
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [crediscore]
+      verifyImages:
+        - imageReferences: ["*"]
+          failureAction: Enforce
+          mutateDigest: true # reemplaza el tag por el digest verificado
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keyless:
+                    subject: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/.github/workflows/ci.yml@refs/heads/main"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
+          attestations:
+            - type: https://slsa.dev/provenance/v0.2
+              attestors:
+                - entries:
+                    - keyless:
+                        subject: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/.github/workflows/ci.yml@refs/heads/main"
+                        issuer: "https://token.actions.githubusercontent.com"
+                        rekor:
+                          url: https://rekor.sigstore.dev
+              conditions:
+                - all:
+                    - key: "{{ builder.id }}"
+                      operator: Equals
+                      value: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/.github/workflows/ci.yml@refs/heads/main"
