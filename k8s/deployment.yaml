@@ -6,10 +6,6 @@ kind: Deployment
 metadata:
   name: scoring-api
   namespace: crediscore
-  annotations:
-    # Excepciones de Checkov (S10), cada una con su motivo. Ver README > triage y excepciones.
-    checkov.io/skip1: CKV_K8S_43=El tag es el SHA del commit (inmutable) y Kyverno fija el digest al admitir el Pod
-    checkov.io/skip2: CKV_K8S_35=El Secret aun no tiene claves; cuando las tenga se montaran como archivo
   labels:
     app.kubernetes.io/name: scoring-api
     app.kubernetes.io/part-of: crediscore
@@ -61,7 +57,7 @@ spec:
           # El despliegue real sale de 4Noisy/gitops-repo (base/), donde cada
           # overlay fija el tag.
           image: ghcr.io/4noisy/scoring-api:487cef4d2db95238c6185519240835121e4001f2
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080

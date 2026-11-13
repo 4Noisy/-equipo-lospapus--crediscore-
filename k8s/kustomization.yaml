@@ -17,4 +17,3 @@ resources:
   - ingress.yaml
   - hpa.yaml
   - poddisruptionbudget.yaml
-  - networkpolicy.yaml
