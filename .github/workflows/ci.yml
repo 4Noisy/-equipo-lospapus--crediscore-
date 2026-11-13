@@ -18,7 +18,7 @@ permissions:
 env:
   # Debe coincidir con la imagen de gitops: ghcr.io/4noisy/scoring-api
   IMAGE_NAME: scoring-api
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.13"
   GITOPS_REPO: 4Noisy/gitops-repo
 
 jobs:
@@ -124,7 +124,7 @@ jobs:
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         with:
           image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
-          severity: CRITICAL
+          severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
 

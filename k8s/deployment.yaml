@@ -1,5 +1,5 @@
 # Deployment de scoring-api a partir del Dockerfile real del repo:
-# build python:3.11-slim -> runtime gcr.io/distroless/python3-debian12:nonroot,
+# build python:3.13-slim -> runtime gcr.io/distroless/python3-debian13:nonroot,
 # ENTRYPOINT ["python3", "-m", "src.main"], EXPOSE 8080, USER nonroot (UID 65532).
 apiVersion: apps/v1
 kind: Deployment

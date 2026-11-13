@@ -22,7 +22,7 @@ permissions:
 
 env:
   GITLEAKS_VERSION: "8.28.0"
-  PYTHON_VERSION: "3.11" # misma versión que ci.yml y el Dockerfile
+  PYTHON_VERSION: "3.13" # misma versión que ci.yml y el Dockerfile
   CYCLONEDX_BOM_VERSION: "8.0.1"
 
 jobs:
@@ -161,6 +161,38 @@ jobs:
             echo "- Config: \`.gitleaks.toml\` (reglas por defecto + falsos positivos justificados)"
             echo "- Si falla: **rotar el secreto primero**, limpiar el historial después. Ver \`docs/security/secret-scanning.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Container scan (S10): construye la imagen en el runner (sin publicarla)
+  # y Trivy busca CVEs del sistema operativo y de las librerías.
+  # Así una imagen vulnerable se frena en el PR, antes de llegar a GHCR.
+  # ---------------------------------------------------------------------------
+  container-scan:
+    name: container-scan (trivy image)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Construir la imagen (solo local, no se publica)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          load: true
+          push: false
+          tags: scoring-api:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy sobre la imagen (falla en HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: scoring-api:scan
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
   # ---------------------------------------------------------------------------
   # SAST: análisis estático del código de la API (Semgrep)
