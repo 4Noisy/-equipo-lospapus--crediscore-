@@ -1,0 +1,2 @@
+# Excepciones del DAST (ZAP). Formato: id<TAB>IGNORE|WARN|FAIL<TAB>motivo
+# Cada línea nueva se agrega por PR, con el motivo escrito (ver README > triage y excepciones).
