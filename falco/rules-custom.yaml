@@ -10,7 +10,7 @@
 #    que no sea python3, alguien metió un binario en el contenedor.
 - rule: CrediScore - Shell o proceso inesperado en scoring-api
   desc: Se ejecutó dentro de scoring-api un proceso distinto de python3
-  condition: spawned_process and scoring_api and not proc.name in (python3, python3.11)
+  condition: spawned_process and scoring_api and not proc.name startswith "python3"
   output: >
     Proceso inesperado en scoring-api (proceso=%proc.name cmdline=%proc.cmdline
     usuario=%user.name contenedor=%container.name imagen=%container.image.repository)

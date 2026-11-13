@@ -112,7 +112,7 @@ jobs:
       - name: Simular los 3 ataques
         run: |
           # 1. "Shell": copiamos el binario de python como /tmp/sh y lo ejecutamos
-          docker exec api python3 -c "import shutil,os; shutil.copy('/usr/bin/python3.11','/tmp/sh'); os.chmod('/tmp/sh',0o755)"
+          docker exec api python3 -c "import shutil,os; shutil.copy('/usr/bin/python3','/tmp/sh'); os.chmod('/tmp/sh',0o755)"
           docker exec api /tmp/sh -c "print('hola desde un shell falso')"
           # 2. Escribir fuera de /tmp
           docker exec api python3 -c "open('/home/nonroot/puerta-trasera.txt','w').write('x')"
