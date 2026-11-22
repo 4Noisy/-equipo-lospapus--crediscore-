@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediScore · Defensa final</title>
+<!-- Fuentes: Archivo (títulos, cifras) + Nunito (texto). Swiss Modern. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (TEMA)
+   Cambia estos valores para cambiar todo el look.
+   =========================================== */
+:root {
+    --paper: #ffffff;
+    --ink: #0b0b0b;
+    --red: #ff3300;
+    --grey: #6b6b6b;
+    --hair: rgba(0, 0, 0, .08);
+    --soft: #f3f2ef;
+    --font-display: 'Archivo', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --stage-bg: #e6e5e1;
+    --slide-bg: #ffffff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (contenido completo de viewport-base.css)
+   =========================================== */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--slide-bg, #fff); }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--slide-bg, #fff); }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide { position: relative; display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; width: 1920px; height: 1080px; break-after: page; page-break-after: always; }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   SWISS SLIDE CHROME
+   Grilla visible de 160 px, barra roja a la izquierda,
+   kicker de sección arriba, quién presenta y paginación.
+   =========================================== */
+.slide { font-family: var(--font-body); color: var(--ink); }
+.slide::before {               /* grilla vertical visible */
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+    background-size: 160px 100%; pointer-events: none;
+}
+.bar { position: absolute; left: 0; top: 0; width: 24px; height: 1080px; background: var(--red); transform-origin: top; transform: scaleY(0); transition: transform .9s var(--ease); }
+.slide.visible .bar { transform: scaleY(1); }
+.kicker { position: absolute; left: 160px; top: 76px; font: 700 24px/1 var(--font-display); letter-spacing: .18em; text-transform: uppercase; }
+.kicker b { color: var(--red); }
+.who { position: absolute; right: 120px; top: 76px; font: 600 24px/1 var(--font-body); color: var(--grey); }
+.who b { color: var(--ink); font-weight: 700; }
+.foot { position: absolute; left: 160px; right: 120px; bottom: 56px; display: flex; justify-content: space-between; border-top: 3px solid var(--ink); padding-top: 18px; font: 600 22px/1 var(--font-body); }
+.foot .pg { font-family: var(--font-display); font-weight: 800; }
+.secnum { position: absolute; right: 110px; top: 120px; font: 900 260px/.8 var(--font-display); color: var(--red); letter-spacing: -.04em; }
+
+/* Inverted (black) slides for section beats */
+.slide.dark { --slide-bg: var(--ink); background: var(--ink); color: var(--paper); }
+.slide.dark::before { background-image: linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px); }
+.slide.dark .foot { border-color: var(--paper); }
+.slide.dark .who { color: #9a9a9a; }
+.slide.dark .who b { color: var(--paper); }
+.slide.red { --slide-bg: var(--red); background: var(--red); color: var(--ink); }
+.slide.red::before { background-image: linear-gradient(90deg, rgba(0,0,0,.12) 1px, transparent 1px); }
+.slide.red .bar { background: var(--ink); }
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+.h-xl { font: 900 220px/.86 var(--font-display); letter-spacing: -.045em; }
+.h-l  { font: 900 128px/.92 var(--font-display); letter-spacing: -.035em; }
+.h-m  { font: 800 76px/1 var(--font-display); letter-spacing: -.02em; }
+.h-s  { font: 800 40px/1.1 var(--font-display); letter-spacing: -.01em; }
+.lead { font: 600 40px/1.3 var(--font-body); }
+.body { font: 400 30px/1.4 var(--font-body); }
+.small { font: 600 24px/1.35 var(--font-body); color: var(--grey); }
+.mono { font-family: var(--font-display); font-weight: 600; letter-spacing: .04em; }
+.red-t { color: var(--red); }
+.grey-t { color: var(--grey); }
+.u { text-decoration: underline; text-decoration-color: var(--red); text-decoration-thickness: 8px; text-underline-offset: 10px; }
+
+/* ===========================================
+   LAYOUT HELPERS (posiciones absolutas en el stage)
+   =========================================== */
+.abs { position: absolute; }
+.content { position: absolute; left: 160px; right: 120px; top: 190px; bottom: 140px; }
+.row { display: flex; gap: 48px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+
+/* ===========================================
+   COMPONENTS
+   =========================================== */
+/* Stat: cifra grande + etiqueta */
+.stat .n { font: 900 150px/.9 var(--font-display); letter-spacing: -.04em; }
+.stat .n.red-t { color: var(--red); }
+.stat .l { margin-top: 14px; font: 700 26px/1.3 var(--font-body); }
+.stat .s { margin-top: 6px; font: 600 22px/1.35 var(--font-body); color: var(--grey); }
+.slide.dark .stat .s { color: #9a9a9a; }
+
+/* Caja con borde grueso */
+.box { border: 4px solid var(--ink); padding: 32px 36px; background: var(--paper); }
+.box.fill { background: var(--ink); color: var(--paper); }
+.box.redf { background: var(--red); color: var(--ink); border-color: var(--red); }
+.box .t { font: 800 34px/1.1 var(--font-display); margin-bottom: 14px; }
+.box .d { font: 400 26px/1.38 var(--font-body); }
+.box .tag { font: 700 20px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--red); margin-bottom: 16px; }
+.box.fill .tag { color: var(--red); }
+.box.redf .tag { color: var(--ink); }
+
+/* Tabla editorial */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl td, .tbl th { text-align: left; padding: 18px 16px 18px 0; border-top: 2px solid var(--ink); font: 400 26px/1.3 var(--font-body); vertical-align: top; }
+.tbl th { font: 800 20px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; border-top: 0; padding-bottom: 14px; }
+.tbl td.num { font: 800 30px/1.2 var(--font-display); text-align: right; padding-right: 0; }
+.tbl tr.hl td { color: var(--red); font-weight: 700; }
+
+/* Flujo de cajas con flechas */
+.flow { display: flex; align-items: stretch; gap: 0; }
+.flow .step { flex: 1; border: 4px solid var(--ink); padding: 24px 22px; position: relative; background: var(--paper); }
+.flow .step + .step { margin-left: 56px; }
+.flow .step + .step::before { content: ""; position: absolute; left: -52px; top: 50%; width: 44px; height: 4px; background: var(--ink); }
+.flow .step + .step::after { content: ""; position: absolute; left: -16px; top: calc(50% - 10px); border: 12px solid transparent; border-left: 14px solid var(--ink); border-right: 0; }
+.flow .step .k { font: 700 18px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--red); margin-bottom: 12px; }
+.flow .step .t { font: 800 30px/1.1 var(--font-display); }
+.flow .step .d { font: 400 22px/1.35 var(--font-body); margin-top: 10px; color: #333; }
+.flow .step.hot { background: var(--red); border-color: var(--red); }
+.flow .step.hot .k { color: var(--ink); }
+.flow .step.inv { background: var(--ink); color: var(--paper); }
+.flow .step.inv .d { color: #cfcfcf; }
+
+/* Barras horizontales (FinOps) */
+.bars .b { display: grid; grid-template-columns: 420px 1fr 170px; align-items: center; gap: 24px; margin-bottom: 18px; font: 700 26px/1.2 var(--font-body); }
+.bars .track { height: 44px; background: var(--soft); position: relative; }
+.bars .fillb { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); width: 0; transition: width 1.2s var(--ease) .3s; }
+.bars .b.hl .fillb { background: var(--red); }
+.slide.visible .bars .fillb { width: var(--w); }
+.bars .v { font: 800 28px/1 var(--font-display); text-align: right; }
+
+/* Lista numerada swiss */
+.nlist { list-style: none; counter-reset: n; }
+.nlist li { counter-increment: n; display: grid; grid-template-columns: 90px 1fr; padding: 20px 0; border-top: 2px solid currentColor; font: 600 32px/1.3 var(--font-body); }
+.nlist li::before { content: counter(n, decimal-leading-zero); font: 900 32px/1.3 var(--font-display); color: var(--red); }
+
+/* Chips */
+.chip { display: inline-block; padding: 10px 18px; border: 3px solid currentColor; font: 700 22px/1 var(--font-display); letter-spacing: .06em; margin: 0 10px 12px 0; }
+.chip.r { background: var(--red); border-color: var(--red); color: var(--ink); }
+
+/* Geometría decorativa (círculo + línea + punto) */
+.ring { position: absolute; border-radius: 50%; border: 24px solid var(--ink); }
+.slash { position: absolute; height: 24px; background: var(--red); transform-origin: left center; }
+.dotr { position: absolute; border-radius: 50%; background: var(--red); }
+
+/* ===========================================
+   ANIMATIONS (se disparan con .visible)
+   Usar style="--d:.2s" para escalonar.
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(34px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0s); }
+.slide.visible .reveal { opacity: 1; transform: none; }
+.reveal-l { opacity: 0; transform: translateX(-60px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0s); }
+.slide.visible .reveal-l { opacity: 1; transform: none; }
+.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+
+/* ===========================================
+   DECK CONTROLS (fuera del stage)
+   =========================================== */
+.progress { position: fixed; left: 0; top: 0; height: 5px; background: var(--red); z-index: 1001; transition: width .4s var(--ease); }
+.counter { font: 700 15px/1 'Archivo', sans-serif; letter-spacing: .1em; color: #555; background: rgba(255,255,255,.85); padding: 8px 14px; }
+
+/* ===========================================
+   INLINE EDITING (E o esquina superior izquierda)
+   =========================================== */
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle { position: fixed; top: 16px; left: 16px; z-index: 10001; width: 48px; height: 48px; border: 3px solid #0b0b0b; background: #fff; font: 800 18px 'Archivo', sans-serif; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: #ff3300; }
+body.editing [data-editable] { outline: 2px dashed rgba(255,51,0,.6); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="edit-hotzone" aria-hidden="true"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edición (E)">ED</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- =====================================================
+     01 · PORTADA
+     ===================================================== -->
+<section class="slide active" data-title="Portada">
+    <!-- Notas: Emilio abre. 5 segundos de silencio con esta portada antes de hablar. -->
+    <div class="bar"></div>
+    <div class="kicker">Taller de Ingeniería de Software · <b>Defensa final</b></div>
+    <div class="secnum reveal" style="--d:.2s; font-size:300px; top:90px">18</div>
+    <h1 class="h-xl abs reveal" style="left:150px; top:300px; font-size:240px; --d:.1s">Credi<br>Score.</h1>
+    <p class="lead abs reveal" style="left:160px; top:770px; width:980px; font:600 48px/1.2 var(--font-display); --d:.35s">Decisiones de crédito en <span class="red-t">segundos</span>, explicadas y sin sesgo.</p>
+    <div class="ring reveal" style="right:330px; top:600px; width:230px; height:230px; --d:.5s"></div>
+    <div class="slash reveal" style="right:20px; top:705px; width:330px; transform:rotate(-28deg); --d:.6s"></div>
+    <div class="foot"><span>Equipo lospapus · Garrido · Ortiz · Arevalo · Santibáñez · Jara · Navarro</span><span>Noviembre 2026</span></div>
+</section>
+
+<!-- =====================================================
+     02 · ELEVATOR PITCH: EL PROBLEMA
+     ===================================================== -->
+<section class="slide" data-title="Problema">
+    <!-- Notas (Emilio, 0:00–0:30): problema y usuario, sin jerga. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>01</b> · Elevator pitch</div>
+    <div class="who"><b>Emilio</b> · Product Owner</div>
+    <div class="secnum reveal" style="--d:.2s">01</div>
+    <h2 class="h-l abs reveal" style="left:160px; top:330px; width:1560px; font-size:104px; --d:.1s">Pides un microcrédito.<br>Esperas días.<br><span class="red-t">Y si es no,<br>no sabes por qué.</span></h2>
+    <p class="lead abs reveal grey-t" style="left:160px; top:830px; width:1300px; --d:.35s">Solicitantes de microcrédito y los partners que originan por API.</p>
+    <div class="foot"><span>CrediScore · Defensa final</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     03 · ELEVATOR PITCH: EL VALOR
+     ===================================================== -->
+<section class="slide" data-title="Valor">
+    <!-- Notas (Emilio, 0:30–1:00): tres promesas y el cierre "cada número tiene un link en el repo". -->
+    <div class="bar"></div>
+    <div class="kicker"><b>01</b> · Elevator pitch</div>
+    <div class="who"><b>Emilio</b> · Product Owner</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s">Lo que entregamos</h2>
+        <div class="grid3" style="margin-top:80px">
+            <div class="stat reveal" style="--d:.15s"><div class="n">&lt;60<span style="font-size:80px">s</span></div><div class="l">Decisión de crédito (p95)</div><div class="s">Hoy: 8,2 ms en el game day</div></div>
+            <div class="stat reveal" style="--d:.3s"><div class="n red-t">0</div><div class="l">Atributos protegidos en el modelo</div><div class="s">Género y comuna rechazados por contrato (422)</div></div>
+            <div class="stat reveal" style="--d:.45s"><div class="n">1<span style="font-size:80px"> párrafo</span></div><div class="l">Explicación clara + derecho a revisión humana</div><div class="s">Ley 21.719, art. 8 bis</div></div>
+        </div>
+        <p class="lead reveal" style="position:absolute; bottom:10px; --d:.6s">Todo lo que van a ver corre desde <span class="u">main</span>. Cada número tiene un link en el repo.</p>
+    </div>
+    <div class="foot"><span>CrediScore · Defensa final</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     04 · DEMO EN VIVO
+     ===================================================== -->
+<section class="slide dark" data-title="Demo en vivo">
+    <!-- Notas (Justin, 1:00–4:00): python scripts/smoke_e2e.py $STAGING.
+         Si algo falla: decirlo en voz alta y usar el fallback de docs/defensa/demo.md. Nada pregrabado. -->
+    <div class="bar"></div>
+    <div class="kicker" style="color:#fff"><b>02</b> · Demo</div>
+    <div class="who"><b>Justin</b> · QA</div>
+    <div class="abs reveal" style="left:160px; top:240px; display:flex; align-items:center; gap:28px; --d:.05s">
+        <span class="pulse" style="display:inline-block; width:44px; height:44px; border-radius:50%; background:var(--red)"></span>
+        <span style="font:800 34px/1 var(--font-display); letter-spacing:.2em; color:var(--red)">EN VIVO · STAGING</span>
+    </div>
+    <h2 class="abs reveal" style="left:150px; top:330px; font:900 290px/.84 var(--font-display); letter-spacing:-.05em; --d:.15s">Demo<br>en vivo.</h2>
+    <div class="abs reveal" style="left:1240px; top:330px; width:560px; --d:.35s">
+        <ol class="nlist" style="color:#fff">
+            <li style="font-size:26px; padding:14px 0">Crear solicitud</li>
+            <li style="font-size:26px; padding:14px 0">Reintento idempotente</li>
+            <li style="font-size:26px; padding:14px 0">Misma clave, otro cuerpo → 409</li>
+            <li style="font-size:26px; padding:14px 0">Decisión trazable</li>
+            <li style="font-size:26px; padding:14px 0">Explicación IA</li>
+            <li style="font-size:26px; padding:14px 0">Prompt injection neutralizado</li>
+            <li style="font-size:26px; padding:14px 0">Género → 422 · métricas</li>
+        </ol>
+    </div>
+    <div class="foot" style="color:#fff"><span>python scripts/smoke_e2e.py $STAGING</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     05 · ARQUITECTURA: C4 EN 3 NIVELES
+     ===================================================== -->
+<section class="slide" data-title="C4">
+    <!-- Notas (Benjamín, 4:00–4:45): bajar de L1 a L3 en 45 s. Señalar el repositorio en memoria antes que el panel. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>03</b> · Arquitectura</div>
+    <div class="who"><b>Benjamín</b> · Tech Lead</div>
+    <div class="secnum reveal" style="--d:.2s">03</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s; width:1200px">C4 en tres niveles</h2>
+        <div class="flow" style="margin-top:90px; height:420px">
+            <div class="step reveal" style="--d:.15s"><div class="k">L1 · Contexto</div><div class="t">CrediScore y su mundo</div><div class="d">Solicitante, partner, analista, CMF, burós, proveedor KYC.</div></div>
+            <div class="step reveal" style="--d:.3s"><div class="k">L2 · Contenedores</div><div class="t">Event-driven en AWS</div><div class="d">API Gateway, microservicios en EKS + Fargate, Aurora, MSK, S3 de auditoría.</div></div>
+            <div class="step hot reveal" style="--d:.45s"><div class="k">L3 · Componentes</div><div class="t">scoring-api por dentro</div><div class="d" style="color:#111">Idempotencia, validación, scoring, explicador IA, métricas… y el repositorio en memoria.</div></div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/c4/ · l1-context · l2-container · l3-component-scoring-api</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     06 · ARQUITECTURA: L3 Y EL MAYOR RIESGO
+     ===================================================== -->
+<section class="slide" data-title="L3">
+    <!-- Notas (Benjamín): "este es nuestro mayor riesgo, y lo decimos nosotros antes que ustedes". -->
+    <div class="bar"></div>
+    <div class="kicker"><b>03</b> · Arquitectura · scoring-api</div>
+    <div class="who"><b>Benjamín</b> · Tech Lead</div>
+    <div class="content">
+        <div class="grid4" style="margin-top:10px">
+            <div class="box reveal" style="--d:.05s"><div class="tag">Entrada</div><div class="t">Middleware</div><div class="d">trace_id, headers de seguridad, métricas</div></div>
+            <div class="box reveal" style="--d:.12s"><div class="tag">Contrato</div><div class="t">Validación</div><div class="d">extra=forbid: sin atributos protegidos</div></div>
+            <div class="box reveal" style="--d:.19s"><div class="tag">Reintentos</div><div class="t">Idempotencia</div><div class="d">misma clave → misma respuesta; otro cuerpo → 409</div></div>
+            <div class="box reveal" style="--d:.26s"><div class="tag">Decisión</div><div class="t">Scoring</div><div class="d">puntaje 0–1000, motivo, versión del modelo</div></div>
+        </div>
+        <div class="grid2" style="margin-top:40px">
+            <div class="box fill reveal" style="--d:.35s"><div class="tag">Feature IA</div><div class="t">Explicador</div><div class="d">minimizador de datos → caché → circuit breaker → LLM → guardrails → plantilla de respaldo</div></div>
+            <div class="box redf reveal" style="--d:.45s"><div class="tag">Riesgo n.º 1</div><div class="t">Repositorio en memoria</div><div class="d">Si cae un Pod se pierden las solicitudes. Medido: 20 de 20. Arreglo: Aurora + outbox.</div></div>
+        </div>
+        <p class="small reveal" style="margin-top:34px; --d:.55s">Un solo proceso a propósito: un bounded context, un equipo chico. Se separa cuando el explicador necesite escalar distinto.</p>
+    </div>
+    <div class="foot"><span>docs/c4/l3-component-scoring-api.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     07 · ARQUITECTURA: TOP 3 ADRs
+     ===================================================== -->
+<section class="slide" data-title="ADRs">
+    <!-- Notas (Benjamín, 5:15–6:30): leer el criterio que descarta, no la lista de opciones. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>03</b> · Arquitectura · decisiones</div>
+    <div class="who"><b>Benjamín</b> · Tech Lead</div>
+    <div class="content">
+        <div class="row" style="align-items:flex-end; justify-content:space-between">
+            <h2 class="h-m reveal" style="--d:.05s">Top 3 de 10 ADRs</h2>
+            <div class="small reveal" style="--d:.1s; text-align:right">9 de 10 discuten alternativas descartadas</div>
+        </div>
+        <table class="tbl reveal" style="margin-top:50px; --d:.2s">
+            <tr><th style="width:150px">ADR</th><th style="width:560px">Decidimos</th><th>Descartamos, porque…</th></tr>
+            <tr><td class="mono red-t" style="font-size:34px; font-weight:900">0002</td><td><b>Event-driven</b></td><td>Monolito modular: acopla fraude &lt; 500 ms con la inferencia de ML. FaaS: cold starts.</td></tr>
+            <tr><td class="mono red-t" style="font-size:34px; font-weight:900">0008</td><td><b>El LLM explica, no decide</b></td><td>LLM que decide: no es reproducible ni auditable y un prompt injection podría aprobar un crédito.</td></tr>
+            <tr><td class="mono red-t" style="font-size:34px; font-weight:900">0009</td><td><b>Degradar con elegancia</b></td><td>Sesiones pegajosas: esconden la pérdida de datos. Reintentos al LLM: medido, hasta 7 s de espera.</td></tr>
+        </table>
+    </div>
+    <div class="foot"><span>docs/adr/0001 … 0010</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     08 · DEVSECOPS: PIPELINE
+     ===================================================== -->
+<section class="slide" data-title="DevSecOps">
+    <!-- Notas (Martin, 6:30–7:30): abrir el último run verde de main y recorrerlo de izquierda a derecha. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>04</b> · DevSecOps</div>
+    <div class="who"><b>Martin</b> · DevSecOps</div>
+    <div class="secnum reveal" style="--d:.2s">04</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s; width:1250px">Nada llega al clúster sin pasar por aquí</h2>
+        <div class="flow" style="margin-top:80px">
+            <div class="step reveal" style="--d:.1s"><div class="k">PR</div><div class="t">6 escáneres bloqueantes</div><div class="d">SAST Semgrep · SCA Trivy + SBOM · gitleaks · Checkov · Trivy imagen · ZAP</div></div>
+            <div class="step reveal" style="--d:.22s"><div class="k">main</div><div class="t">Build + firma</div><div class="d">Cosign keyless + attestation SLSA nivel 2, por digest</div></div>
+            <div class="step inv reveal" style="--d:.34s"><div class="k">GitOps</div><div class="t">Argo CD</div><div class="d">dev directo · prod por PR con revisión</div></div>
+            <div class="step hot reveal" style="--d:.46s"><div class="k">Clúster</div><div class="t">Kyverno + Falco</div><div class="d" style="color:#111">sin firma de main no entra · shell, escritura y egress alertan</div></div>
+        </div>
+        <p class="lead reveal" style="margin-top:70px; --d:.6s">Cada control <span class="u">bloqueó algo real</span> al menos una vez: 45 CVE, hostNetwork, header faltante, imagen sin firma.</p>
+    </div>
+    <div class="foot"><span>.github/workflows/ci.yml · security.yml · supply-chain.yml</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     09 · DEVSECOPS: SECRETOS
+     ===================================================== -->
+<section class="slide" data-title="Secretos">
+    <!-- Notas (Martin, 7:30–8:30): respuesta directa a "muéstrame un secret". Mostrar k8s/secret.yaml = solo placeholder. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>04</b> · DevSecOps · secretos</div>
+    <div class="who"><b>Martin</b> · DevSecOps</div>
+    <div class="content">
+        <div class="grid2" style="grid-template-columns: 640px 1fr; gap:90px">
+            <div>
+                <div class="stat reveal" style="--d:.05s"><div class="n red-t" style="font-size:230px">0</div><div class="l" style="font-size:34px">secretos en el repo</div><div class="s">gitleaks sobre todo el historial en cada PR. Firma sin llave: no hay nada que rotar.</div></div>
+            </div>
+            <table class="tbl reveal" style="--d:.2s; margin-top:20px">
+                <tr><th>Secreto</th><th>Vive en</th><th>Rota</th></tr>
+                <tr><td><b>GITOPS_TOKEN</b></td><td>GitHub secrets</td><td>DevSecOps · 90 d</td></tr>
+                <tr><td><b>ANTHROPIC_API_KEY</b></td><td>Secrets Manager → ExternalSecret</td><td>AI/Data · 90 d</td></tr>
+                <tr><td><b>DATABASE_URL</b></td><td>Secrets Manager</td><td>RDS automático · 30 d</td></tr>
+                <tr><td><b>Firma de imágenes</b></td><td>Keyless (OIDC)</td><td>—</td></tr>
+            </table>
+        </div>
+        <p class="small reveal" style="position:absolute; bottom:0; --d:.4s">Si se filtra uno: se rota primero y se limpia después. docs/resiliencia/runbook.md · R6</p>
+    </div>
+    <div class="foot"><span>docs/security/secret-scanning.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     10 · CALIDAD DEL CÓDIGO Y TESTS
+     ===================================================== -->
+<section class="slide" data-title="Tests">
+    <!-- Notas (Martin o Justin): si el panel pide "un test que falle si borro esta función", hacerlo en vivo: pytest -q -k idempotencia. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>04</b> · Calidad del código</div>
+    <div class="who"><b>Justin</b> · QA</div>
+    <div class="content">
+        <div class="grid4">
+            <div class="stat reveal" style="--d:.05s"><div class="n">55</div><div class="l">tests en el CI</div></div>
+            <div class="stat reveal" style="--d:.15s"><div class="n">98<span style="font-size:80px">%</span></div><div class="l">cobertura de src/</div></div>
+            <div class="stat reveal" style="--d:.25s"><div class="n red-t">12</div><div class="l">contract tests contra OpenAPI</div></div>
+            <div class="stat reveal" style="--d:.35s"><div class="n">9</div><div class="l">pasos E2E por HTTP real</div></div>
+        </div>
+        <div class="box fill reveal" style="margin-top:80px; --d:.5s; padding:40px 48px">
+            <div class="tag">¿Un test que falle si borro esta función?</div>
+            <div style="font:700 36px/1.4 var(--font-display)">Quitar el chequeo de idempotencia → <span class="red-t">falla test_idempotencia_misma_key_otro_cuerpo_da_409</span>. Agregar un endpoint sin documentarlo → falla el contract test.</div>
+        </div>
+    </div>
+    <div class="foot"><span>tests/test_contract.py · test_integration.py · test_explainer.py</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     11 · IA RESPONSABLE: LA DECISIÓN
+     ===================================================== -->
+<section class="slide red" data-title="IA">
+    <!-- Notas (Abdiel, 8:30–9:30): la frase de la slide es la tesis del bloque. -->
+    <div class="bar"></div>
+    <div class="kicker"><b style="color:#fff">05</b> · IA responsable</div>
+    <div class="who" style="color:#2a0a00"><b>Abdiel</b> · AI/Data</div>
+    <div class="secnum reveal" style="--d:.2s; color:#fff">05</div>
+    <h2 class="abs reveal" style="left:150px; top:360px; font:900 176px/.9 var(--font-display); letter-spacing:-.045em; --d:.1s">El LLM explica.<br><span style="color:#fff">No decide.</span></h2>
+    <p class="lead abs reveal" style="left:160px; top:780px; width:1400px; --d:.35s">Recibe 5 campos de una decisión ya tomada. Nunca el RUT. Nunca texto libre. Si falla, responde una plantilla.</p>
+    <div class="foot"><span>docs/adr/0008-feature-ia-explicador.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     12 · IA RESPONSABLE: GUARDRAILS Y PROMPT INJECTION
+     ===================================================== -->
+<section class="slide" data-title="Guardrails">
+    <!-- Notas (Abdiel): respuesta a "¿qué hace tu sistema frente a un prompt injection?". -->
+    <div class="bar"></div>
+    <div class="kicker"><b>05</b> · IA responsable · guardrails</div>
+    <div class="who"><b>Abdiel</b> · AI/Data</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s">Prompt injection: tres capas</h2>
+        <div class="grid3" style="margin-top:70px">
+            <div class="box reveal" style="--d:.15s; height:400px"><div class="tag">1 · Diseño</div><div class="t">No llega al prompt</div><div class="d">El texto del partner no entra al LLM. Solo resultado, puntaje, motivos, monto y plazo.</div></div>
+            <div class="box reveal" style="--d:.3s; height:400px"><div class="tag">2 · Detección</div><div class="t">Se marca</div><div class="d"><b>14/14</b> ataques detectados, <b>0</b> falsos positivos en 12 normales. Queda en métricas y logs.</div></div>
+            <div class="box fill reveal" style="--d:.45s; height:400px"><div class="tag">3 · Salida</div><div class="t">8 guardrails</div><div class="d">Coherencia con la decisión · puntaje · PII · atributos protegidos · promesas · fuga de prompt · revisión humana · largo</div></div>
+        </div>
+    </div>
+    <div class="foot"><span>src/explainer.py · tests/test_explainer.py</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     13 · IA RESPONSABLE: EVALUACIÓN
+     ===================================================== -->
+<section class="slide" data-title="Evaluación">
+    <!-- Notas (Nelson, 9:30–10:30): números + "lo que no hicimos". -->
+    <div class="bar"></div>
+    <div class="kicker"><b>05</b> · IA responsable · evaluación</div>
+    <div class="who"><b>Nelson</b> · AI/Data</div>
+    <div class="content">
+        <div class="row" style="justify-content:space-between; align-items:flex-end">
+            <h2 class="h-m reveal" style="--d:.05s">Evaluada en cada PR</h2>
+            <div class="small reveal" style="--d:.1s">python -m eval.run_eval · bloquea el merge</div>
+        </div>
+        <div class="grid4" style="margin-top:70px">
+            <div class="stat reveal" style="--d:.15s"><div class="n">26<span style="font-size:70px">/26</span></div><div class="l">Golden set</div><div class="s">8 criterios por caso</div></div>
+            <div class="stat reveal" style="--d:.25s"><div class="n">16<span style="font-size:70px">/16</span></div><div class="l">Red team bloqueado</div><div class="s">0 falsos positivos en 8 buenas</div></div>
+            <div class="stat reveal" style="--d:.35s"><div class="n">14<span style="font-size:70px">/14</span></div><div class="l">Injections detectadas</div><div class="s">0 falsos positivos en 12</div></div>
+            <div class="stat reveal" style="--d:.45s"><div class="n red-t">0,96</div><div class="l">Disparate impact mín.</div><div class="s">Regla 4/5 ≥ 0,8</div></div>
+        </div>
+        <div class="box redf reveal" style="margin-top:70px; --d:.6s; padding:28px 40px">
+            <div style="font:700 30px/1.35 var(--font-body)"><b>Lo que no hicimos:</b> el golden set con el LLM real (sin API key cargada). El red team lo escribimos nosotros: el 100 % es optimista. Fairness con datos sintéticos.</div>
+        </div>
+    </div>
+    <div class="foot"><span>eval/results/template.md · .github/workflows/ai-eval-llm.yml</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     14 · IA RESPONSABLE: FAIRNESS Y MARCO LEGAL
+     ===================================================== -->
+<section class="slide" data-title="Fairness y ley">
+    <!-- Notas (Nelson): respuesta a "¿cómo demuestran fairness a un regulador?" y "¿cómo aplica la Ley 21.719?". -->
+    <div class="bar"></div>
+    <div class="kicker"><b>05</b> · IA responsable · fairness y ley</div>
+    <div class="who"><b>Nelson</b> · AI/Data</div>
+    <div class="content">
+        <div class="grid2" style="gap:90px">
+            <div>
+                <h2 class="h-s reveal" style="--d:.05s">Fairness en 4 capas</h2>
+                <ol class="nlist reveal" style="margin-top:30px; --d:.15s">
+                    <li>Diseño: el contrato rechaza género y comuna</li>
+                    <li>Resultado: 0,989 género · 0,959 zona</li>
+                    <li>Explicación: sin atributos protegidos</li>
+                    <li>Trazabilidad: versión de modelo y prompt</li>
+                </ol>
+            </div>
+            <div>
+                <h2 class="h-s reveal" style="--d:.1s">Marco legal</h2>
+                <table class="tbl reveal" style="margin-top:30px; --d:.25s">
+                    <tr><td style="width:230px"><b class="red-t">Ley 21.719</b></td><td>Art. 8 bis: explicación y revisión humana en cada respuesta. Minimización: el LLM no ve datos personales.</td></tr>
+                    <tr><td><b>Ley 20.609</b></td><td>Antidiscriminación: atributos fuera del modelo.</td></tr>
+                    <tr><td><b>Ley 21.521</b></td><td>Fintec y CMF: trazabilidad y riesgo de proveedores.</td></tr>
+                </table>
+                <p class="small reveal" style="margin-top:20px; --d:.35s">Vigencia prevista 1-dic-2026; postergación en trámite.</p>
+            </div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/ia/model-card.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     15 · RESILIENCIA: SLOs
+     ===================================================== -->
+<section class="slide" data-title="SLOs">
+    <!-- Notas (Justin, 10:30–11:00): por qué 99,5 y no 99,9. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>06</b> · Resiliencia</div>
+    <div class="who"><b>Justin</b> · QA</div>
+    <div class="secnum reveal" style="--d:.2s">06</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s">SLOs que podemos sostener</h2>
+        <div class="grid3" style="margin-top:140px; width:1500px">
+            <div class="stat reveal" style="--d:.15s"><div class="n">99,5<span style="font-size:80px">%</span></div><div class="l">Disponibilidad de originación</div><div class="s">Medido: 100 % · 99,977 % con caída</div></div>
+            <div class="stat reveal" style="--d:.3s"><div class="n">300<span style="font-size:70px">ms</span></div><div class="l">p95 de aceptación</div><div class="s">Medido: 8,2 ms</div></div>
+            <div class="stat reveal" style="--d:.45s"><div class="n red-t">99<span style="font-size:80px">%</span></div><div class="l">Explicación en &lt; 3,5 s</div><div class="s">Con el LLM caído: 100 %</div></div>
+        </div>
+        <p class="lead reveal" style="position:absolute; bottom:0; width:1500px; --d:.6s">¿Por qué no 99,9 %? Con estado en memoria y una región, sería una promesa que no podemos medir.</p>
+    </div>
+    <div class="foot"><span>docs/resiliencia/slos.md · observability/prometheus-rules.yaml</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     16 · RESILIENCIA: GAME DAY
+     ===================================================== -->
+<section class="slide" data-title="Game day">
+    <!-- Notas (Justin): la historia es que el game day encontró dos bugs que los tests unitarios no veían. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>06</b> · Resiliencia · game day</div>
+    <div class="who"><b>Justin</b> · QA</div>
+    <div class="content">
+        <table class="tbl reveal" style="--d:.1s">
+            <tr><th style="width:420px">Experimento</th><th>Resultado medido</th><th style="width:160px; text-align:right">¿OK?</th></tr>
+            <tr><td><b>E0 · Línea base</b></td><td>13.670 solicitudes · 100 % · p95 8,2 ms · 1,09 núcleos · 70 MiB</td><td class="num">✓</td></tr>
+            <tr><td><b>E1 · LLM caído</b></td><td>0 errores · p95 3,5 ms · solo 6 llamadas al proveedor caído</td><td class="num">✓</td></tr>
+            <tr class="hl"><td><b>E2 · Kill -9 del proceso</b></td><td>Vuelve en 1,25 s · pero se pierden 20 de 20 solicitudes</td><td class="num">✗</td></tr>
+        </table>
+        <div class="grid2" style="margin-top:56px">
+            <div class="box fill reveal" style="--d:.35s"><div class="tag">Bug 1 · encontrado</div><div class="t">El breaker dejaba pasar ráfagas</div><div class="d">Semiabierto sin exclusión: 12 llamadas → ahora 6. Test de regresión.</div></div>
+            <div class="box fill reveal" style="--d:.45s"><div class="tag">Bug 2 · encontrado</div><div class="t">El reintento duplicaba la espera</div><div class="d">Hasta 7 s antes de caer a la plantilla. Ahora: 3 s, sin reintentos.</div></div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/resiliencia/game-day.md · post-mortem-2026-11-22</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     17 · RESILIENCIA: DR Y RUNBOOK
+     ===================================================== -->
+<section class="slide" data-title="DR">
+    <!-- Notas: si el panel pide el plan de DR, esta es la tabla; el runbook tiene comandos copiables. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>06</b> · Resiliencia · DR</div>
+    <div class="who"><b>Justin</b> · QA</div>
+    <div class="content">
+        <div class="row" style="justify-content:space-between; align-items:flex-end">
+            <h2 class="h-m reveal" style="--d:.05s">Plan de DR probado</h2>
+            <div class="small reveal" style="--d:.1s">gameday.yml: pod kill + restaurar desde Git, cada lunes</div>
+        </div>
+        <table class="tbl reveal" style="margin-top:50px; --d:.2s">
+            <tr><th>Componente</th><th style="width:200px">RTO</th><th style="width:260px">RPO</th><th>Cómo</th></tr>
+            <tr><td><b>scoring-api</b></td><td>15 min</td><td>—</td><td>Argo CD reconcilia desde gitops-repo</td></tr>
+            <tr class="hl"><td><b>Estado de solicitudes</b></td><td>—</td><td>hoy: total</td><td>Brecha medida · Aurora + outbox es la fila 1 del roadmap</td></tr>
+            <tr><td><b>Aurora (diseñado)</b></td><td>30 min</td><td>5 min</td><td>Multi-AZ + PITR + snapshot a otra región</td></tr>
+            <tr><td><b>Región completa</b></td><td>4 h</td><td>15 min</td><td>Terraform en us-east-1 + snapshot copiado</td></tr>
+        </table>
+    </div>
+    <div class="foot"><span>docs/resiliencia/dr-plan.md · runbook.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     18 · FINOPS: COSTO MENSUAL
+     ===================================================== -->
+<section class="slide" data-title="Costo">
+    <!-- Notas (Martin, 11:30–12:30): costo + hallazgo MSK. Aclarar: modelado con precios de lista, no facturado. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>06</b> · FinOps</div>
+    <div class="who"><b>Martin</b> · DevSecOps</div>
+    <div class="content">
+        <div class="row" style="gap:120px; align-items:flex-start">
+            <div class="stat reveal" style="--d:.05s"><div class="n">$2.473</div><div class="l">USD al mes · prod + staging</div></div>
+            <div class="stat reveal" style="--d:.15s"><div class="n red-t">$0,082</div><div class="l">USD por solicitud evaluada</div><div class="s">Objetivo &lt; 0,10</div></div>
+        </div>
+        <div class="bars reveal" style="margin-top:80px; --d:.3s">
+            <div class="b hl"><span>MSK Serverless</span><div class="track"><div class="fillb" style="--w:100%"></div></div><span class="v">70 %</span></div>
+            <div class="b"><span>EKS plano de control</span><div class="track"><div class="fillb" style="--w:12.6%"></div></div><span class="v">9 %</span></div>
+            <div class="b"><span>Aurora Serverless v2</span><div class="track"><div class="fillb" style="--w:9.3%"></div></div><span class="v">7 %</span></div>
+            <div class="b"><span>Fargate · NAT · ALB · resto</span><div class="track"><div class="fillb" style="--w:19.7%"></div></div><span class="v">14 %</span></div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/finops/costos.md · scripts/finops_cost_model.py · precios us-east-1 × 1,5 (supuesto)</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     19 · FINOPS: PALANCAS MEDIDAS
+     ===================================================== -->
+<section class="slide" data-title="Palancas">
+    <!-- Notas (Martin): dos palancas aplicadas y una identificada que decidimos NO aplicar sin datos. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>06</b> · FinOps · palancas</div>
+    <div class="who"><b>Martin</b> · DevSecOps</div>
+    <div class="content">
+        <div class="grid3" style="gap:36px">
+            <div class="box reveal" style="--d:.1s; height:560px">
+                <div class="tag">Palanca 1 · aplicada</div>
+                <div class="stat"><div class="n red-t">−87<span style="font-size:80px">%</span></div></div>
+                <div class="t" style="margin-top:20px">llamadas al LLM</div>
+                <div class="d">8.000 → 1.042. LLM solo para rechazos y revisión, más caché. USD 387 → 50 al mes.</div>
+            </div>
+            <div class="box reveal" style="--d:.25s; height:560px">
+                <div class="tag">Palanca 2 · aplicada</div>
+                <div class="stat"><div class="n">−21<span style="font-size:80px">%</span></div></div>
+                <div class="t" style="margin-top:20px">techo de costo</div>
+                <div class="d">Right-sizing con la capacidad medida: requests 250m, HPA máx. 8, staging en horario hábil.</div>
+            </div>
+            <div class="box fill reveal" style="--d:.4s; height:560px">
+                <div class="tag">Palanca 3 · identificada</div>
+                <div class="stat"><div class="n" style="color:#fff">MSK</div></div>
+                <div class="t" style="margin-top:20px">70 % del costo</div>
+                <div class="d" style="color:#ddd">Hasta −USD 1.400/mes. No se cambia sin tráfico real de eventos.</div>
+            </div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/finops/evidencia/ · labels cost-center y owner en k8s y Terraform</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     20 · ROADMAP
+     ===================================================== -->
+<section class="slide" data-title="Roadmap">
+    <!-- Notas (Emilio, 12:30–14:00): tres filas + break-even con supuestos. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>07</b> · Roadmap</div>
+    <div class="who"><b>Emilio</b> · Product Owner</div>
+    <div class="secnum reveal" style="--d:.2s">07</div>
+    <div class="content">
+        <h2 class="h-m reveal" style="--d:.05s; width:1200px">Si esto fuera un producto real</h2>
+        <ol class="nlist reveal" style="margin-top:60px; width:1180px; --d:.15s">
+            <li><span><b>Aurora + outbox</b> · cierra el riesgo n.º 1 · 3 semanas</span></li>
+            <li><span><b>Golden set con el LLM real</b> · valida la feature IA · media semana</span></li>
+            <li><span><b>Red team externo</b> · otro equipo ataca a ciegas · media semana</span></li>
+            <li><span><b>Decisión sobre MSK</b> · con tráfico real · hasta −USD 1.400/mes</span></li>
+        </ol>
+        <div class="box redf reveal" style="position:absolute; right:0; top:330px; width:420px; --d:.35s">
+            <div class="tag">Break-even (supuestos)</div>
+            <div class="t" style="font-size:44px">~2.100</div>
+            <div class="d">solicitudes al mes con equipo incluido: 7 % del volumen supuesto</div>
+        </div>
+    </div>
+    <div class="foot"><span>docs/defensa/roadmap.md</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     21 · APRENDIZAJES
+     ===================================================== -->
+<section class="slide" data-title="Aprendizajes">
+    <!-- Notas (todos, 14:00–14:40): una frase de cada uno, 10 s c/u, en sus palabras. -->
+    <div class="bar"></div>
+    <div class="kicker"><b>07</b> · Aprendizajes</div>
+    <div class="who"><b>Todo el equipo</b></div>
+    <div class="content">
+        <div class="grid3" style="gap:36px 40px">
+            <div class="reveal" style="--d:.05s"><div class="small" style="color:var(--red); font-weight:800">PO</div><div class="h-s" style="font-size:34px; margin-top:10px">Priorizar por riesgo, no por features.</div></div>
+            <div class="reveal" style="--d:.12s"><div class="small" style="color:var(--red); font-weight:800">TECH LEAD</div><div class="h-s" style="font-size:34px; margin-top:10px">El panel pregunta "por qué no X". Un ADR lo responde.</div></div>
+            <div class="reveal" style="--d:.19s"><div class="small" style="color:var(--red); font-weight:800">DEVSECOPS</div><div class="h-s" style="font-size:34px; margin-top:10px">Un control que nunca bloqueó nada no está probado.</div></div>
+            <div class="reveal" style="--d:.26s; margin-top:50px"><div class="small" style="color:var(--red); font-weight:800">AI/DATA</div><div class="h-s" style="font-size:34px; margin-top:10px">Lo difícil es decidir qué no le dejas hacer al LLM.</div></div>
+            <div class="reveal" style="--d:.33s; margin-top:50px"><div class="small" style="color:var(--red); font-weight:800">AI/DATA</div><div class="h-s" style="font-size:34px; margin-top:10px">Fairness no es una métrica: son cuatro capas.</div></div>
+            <div class="reveal" style="--d:.4s; margin-top:50px"><div class="small" style="color:var(--red); font-weight:800">QA</div><div class="h-s" style="font-size:34px; margin-top:10px">Los tests pasaban. El game day encontró el bug.</div></div>
+        </div>
+    </div>
+    <div class="foot"><span>Borradores: cada uno lo dice en sus palabras</span><span class="pg"></span></div>
+</section>
+
+<!-- =====================================================
+     22 · CIERRE
+     ===================================================== -->
+<section class="slide dark" data-title="Cierre">
+    <!-- Notas (Emilio, 14:40–15:00): cerrar y abrir preguntas. -->
+    <div class="bar"></div>
+    <div class="kicker" style="color:#fff">CrediScore · <b>Defensa final</b></div>
+    <h2 class="abs reveal" style="left:150px; top:200px; width:1560px; font:900 118px/.98 var(--font-display); letter-spacing:-.04em; --d:.1s">Lo que no alcanzamos está escrito en el repo, <span class="red-t">con su porqué.</span></h2>
+    <p class="abs reveal" style="left:160px; top:750px; font:900 120px/1 var(--font-display); letter-spacing:-.03em; --d:.35s">Preguntas.</p>
+    <div class="ring reveal" style="right:200px; top:640px; width:200px; height:200px; border-color:#fff; --d:.5s"></div>
+    <div class="dotr reveal" style="right:270px; top:710px; width:60px; height:60px; --d:.6s"></div>
+    <div class="foot" style="color:#fff"><span>github.com/4Noisy/-equipo-lospapus--crediscore-</span><span class="pg"></span></div>
+</section>
+
+</main>
+</div>
+
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Teclado (flechas, espacio, PgUp/PgDn, Home/End),
+   rueda del mouse, swipe táctil, escalado del stage
+   y paginación automática.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.stage = document.getElementById('deckStage');
+        this.progress = document.getElementById('progress');
+        this.current = 0;
+        this.wheelLock = false;
+        // Paginación en el pie de cada slide
+        this.slides.forEach((s, i) => s.querySelectorAll('.pg').forEach(p => p.textContent = String(i + 1).padStart(2, '0') + ' / ' + this.slides.length));
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupWheelNav();
+        this.setupTouchNav();
+        const fromHash = parseInt(location.hash.replace('#', ''), 10);
+        this.show(Number.isFinite(fromHash) ? fromHash - 1 : 0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (document.body.classList.contains('editing')) return;
+            if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            if (e.key === 'Home') this.show(0);
+            if (e.key === 'End') this.show(this.slides.length - 1);
+        });
+    }
+    setupWheelNav() {
+        window.addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => this.wheelLock = false, 700);
+        }, { passive: true });
+    }
+    setupTouchNav() {
+        let sx = 0;
+        window.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+        window.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - sx;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+        }, { passive: true });
+    }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.current);
+            s.classList.toggle('visible', k === this.current);
+        });
+        this.progress.style.width = `${((this.current + 1) / this.slides.length) * 100}%`;
+        history.replaceState(null, '', '#' + (this.current + 1));
+    }
+}
+const deck = new SlidePresentation();
+
+/* ===========================================
+   INLINE EDITOR
+   E o esquina superior izquierda: edita textos en el navegador.
+   Se guarda en localStorage; Ctrl+S descarga el HTML editado.
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.key = 'crediscore-defensa-edits';
+        this.nodes = Array.from(document.querySelectorAll('.slide h1, .slide h2, .slide p, .slide li, .slide td, .slide .t, .slide .d, .slide .l, .slide .s, .slide .tag, .slide .kicker, .slide .who'));
+        this.nodes.forEach((n, i) => n.setAttribute('data-editable', i));
+        this.restore();
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.getElementById('editToggle').classList.toggle('active', this.isActive);
+        this.nodes.forEach(n => n.contentEditable = this.isActive ? 'true' : 'false');
+        if (!this.isActive) this.save();
+    }
+    save() {
+        try {
+            const data = {};
+            this.nodes.forEach((n, i) => data[i] = n.innerHTML);
+            localStorage.setItem(this.key, JSON.stringify(data));
+        } catch (e) { /* almacenamiento bloqueado: el deck sigue funcionando */ }
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem(this.key) || 'null');
+            if (data) this.nodes.forEach((n, i) => { if (data[i] !== undefined) n.innerHTML = data[i]; });
+        } catch (e) { /* sin datos guardados */ }
+    }
+    download() {
+        this.save();
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+        clone.querySelector('body').classList.remove('editing');
+        const blob = new Blob(['<!DOCTYPE html>\n' + clone.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'presentacion.html';
+        a.click();
+    }
+}
+const editor = new InlineEditor();
+const editToggle = document.getElementById('editToggle');
+const hotzone = document.querySelector('.edit-hotzone');
+let hideTimeout = null;
+editToggle.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+document.addEventListener('keydown', (e) => {
+    if ((e.key === 'e' || e.key === 'E') && !e.target.isContentEditable) editor.toggleEditMode();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); editor.download(); }
+});
+</script>
+</body>
+</html>

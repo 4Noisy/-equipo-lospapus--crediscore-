@@ -1,6 +1,6 @@
 # Guion de defensa · 15 minutos
 
-Estructura obligatoria de la S18, un rol por bloque. **No se leen las slides:** cada bloque tiene 3 ideas y 1 evidencia que se abre en vivo desde el repo. Los tiempos son acumulados para el cronómetro.
+Estructura obligatoria de la S18, un rol por bloque. Slides: [`presentacion.html`](presentacion.html) (abrir en el navegador; flechas o espacio para avanzar, `E` para editar textos, `Ctrl+S` para guardar). **No se leen las slides:** cada bloque tiene 3 ideas y 1 evidencia que se abre en vivo desde el repo. Los tiempos son acumulados para el cronómetro.
 
 > Reparto propuesto según los roles del [CHARTER](../../CHARTER.md). El equipo lo confirma en el ensayo.
 

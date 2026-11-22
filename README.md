@@ -14,7 +14,7 @@ Tres decisiones definen el producto, cada una con sus alternativas descartadas:
 2. **El LLM explica, no decide** ([ADR 0008](docs/adr/0008-feature-ia-explicador.md)): la decisión tiene que ser reproducible para la CMF. El LLM solo redacta, sin ver datos personales, y con una plantilla de respaldo.
 3. **Degradar con elegancia y decir dónde perdemos datos** ([ADR 0009](docs/adr/0009-resiliencia-degradacion.md)): si el LLM cae, la API sigue respondiendo (medido en el game day). El estado en memoria es nuestro mayor riesgo y está declarado, medido y en la primera fila del [roadmap](docs/defensa/roadmap.md).
 
-**Defensa final (S18):** [guion](docs/defensa/guion-pitch.md) · [evidencia por criterio de la rúbrica](docs/defensa/evidencia-rubrica.md) · [Q&A](docs/defensa/qa-panel.md).
+**Defensa final (S18):** [slides](docs/defensa/presentacion.html) · [guion](docs/defensa/guion-pitch.md) · [evidencia por criterio de la rúbrica](docs/defensa/evidencia-rubrica.md) · [Q&A](docs/defensa/qa-panel.md).
 
 ---
 
