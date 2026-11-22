@@ -90,6 +90,7 @@ Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneD
 
 | Herramienta | Dónde se declara | Qué debe decir |
 | :--- | :--- | :--- |
+| Trivy (secretos en la imagen) | `allow-rules` en `trivy-secret.yaml`, acotado por ruta | Por qué el texto no es una credencial. Ej.: docstrings del SDK de Anthropic con `"service_account"` (regla `gcp-service-account`) |
 | Trivy (SCA) | `.trivyignore` en la raíz (Trivy lo lee solo) | CVE, por qué no aplica (estado VEX: `not_affected` + motivo), fecha de revisión |
 | Semgrep (SAST) | Regla propia: PR que corrige la regla en `.semgrep/` y su test en `tests/semgrep/`. Regla pública: `# nosemgrep: <id>` en la línea | Por qué es falso positivo |
 | gitleaks | `[[allowlists]]` en `.gitleaks.toml` | Por qué el valor no es un secreto. Si era real: **rotarlo primero** ([guía](docs/security/secret-scanning.md)) |
