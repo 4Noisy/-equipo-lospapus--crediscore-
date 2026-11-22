@@ -58,6 +58,21 @@ jobs:
             echo "::warning::No existe carpeta tests/, se omiten los tests"
           fi
 
+      # S18 · Evaluación de la feature IA: golden set, red team de guardrails, detector de
+      # prompt injection y fairness. Corre en modo plantilla (sin LLM, sin costo) y bloquea
+      # si un umbral no se cumple. El modo LLM corre aparte (workflow ai-eval-llm.yml).
+      - name: Evaluación IA (golden set + guardrails + fairness)
+        run: |
+          python -m eval.run_eval
+          cat eval/results/template.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir reporte de evaluación IA
+        if: always() && hashFiles('eval/results/template.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-eval-template
+          path: eval/results/template.*
+
       - name: Análisis estático de seguridad (bandit)
         run: |
           if [ -d src ]; then bandit -r src -ll; else bandit -r . -ll --exclude ./tests,./.venv; fi

@@ -7,6 +7,15 @@ commonLabels:
   app.kubernetes.io/part-of: crediscore
   iniciativa: crediscore
 
+# S18 · Tagging FinOps (docs/finops/tagging.md). Van en `labels` sin selectores: agregarlos a
+# commonLabels cambiaría el selector del Deployment (inmutable) y Argo CD no podría sincronizar.
+# El ambiente lo fija cada overlay de gitops-repo.
+labels:
+  - pairs:
+      cost-center: crediscore-scoring
+      owner: lospapus
+    includeSelectors: false
+
 resources:
   - namespace.yaml
   - serviceaccount.yaml

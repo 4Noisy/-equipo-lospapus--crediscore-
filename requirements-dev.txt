@@ -6,3 +6,6 @@ pytest-cov
 httpx          # requerido por TestClient de FastAPI
 bandit
 pip-audit
+jsonschema     # contract tests contra api/openapi.yaml (S18)
+pyyaml
+psutil         # game day local: CPU/RAM del proceso (scripts/gameday_local.py)

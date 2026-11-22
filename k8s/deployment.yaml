@@ -75,10 +75,13 @@ spec:
                 # secret.yaml); optional evita que el Pod falle si se borra temprano.
                 optional: true
           resources:
-            # Estimación inicial (sin benchmark todavía): FastAPI + storage en memoria,
-            # sin modelo de ML real cargado. Ajustar con `kubectl top` en el mini-lab.
+            # S18 · Right-sizing (palanca FinOps 2, docs/finops/costos.md):
+            # - Medido en el game day E0: ~70 MiB de RSS máx. a ~450 req/s por proceso.
+            # - EKS Fargate cobra al menos 0,25 vCPU / 0,5 GB por pod (suma 256 MiB al request
+            #   de memoria): pedir 100m igual se pagaba como 250m. Se pide 250m para que el
+            #   HPA mida contra lo que se paga. 128Mi + 256 = 384 MiB -> sigue en el tier de 0,5 GB.
             requests:
-              cpu: "100m"
+              cpu: "250m"
               memory: "128Mi"
             limits:
               cpu: "500m"

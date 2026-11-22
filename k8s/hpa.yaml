@@ -15,7 +15,10 @@ spec:
     kind: Deployment
     name: scoring-api
   minReplicas: 3
-  maxReplicas: 20
+  # S18 · Techo de costo (palanca FinOps 2): 8 pods de 0,25 vCPU dan ~10x el pico de negocio
+  # estimado con la capacidad medida en el game day E0. Antes 20: un cliente desbocado o un
+  # ataque podía escalar el gasto sin límite útil. Ver docs/finops/costos.md.
+  maxReplicas: 8
   metrics:
     - type: Resource
       resource:

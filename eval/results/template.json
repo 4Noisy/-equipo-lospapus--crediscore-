@@ -1,0 +1,118 @@
+{
+  "mode": "template",
+  "model": null,
+  "prompt_version": "explainer-prompt-v1",
+  "generated_at": "2026-11-22T20:50:17Z",
+  "golden": {
+    "cases": 26,
+    "pass_rate": 1.0,
+    "by_check": {
+      "decision_outcome": 1.0,
+      "decision_score": 1.0,
+      "guardrails": 1.0,
+      "reason_mentioned": 1.0,
+      "human_review": 1.0,
+      "short": 1.0,
+      "injection_flag": 1.0,
+      "no_injection_effect": 1.0
+    },
+    "sources": {
+      "template": 26
+    },
+    "latency_p50_ms": 0.01,
+    "latency_p95_ms": 0.04,
+    "failed": []
+  },
+  "redteam": {
+    "cases": 24,
+    "block_recall": 1.0,
+    "false_positive_rate": 0.0,
+    "confusion": {
+      "tp": 16,
+      "fn": 0,
+      "fp": 0,
+      "tn": 8
+    },
+    "misses": []
+  },
+  "injection": {
+    "cases": 26,
+    "recall": 1.0,
+    "false_positive_rate": 0.0,
+    "confusion": {
+      "tp": 14,
+      "fn": 0,
+      "fp": 0,
+      "tn": 12
+    },
+    "misses": []
+  },
+  "fairness": {
+    "n": 4000,
+    "seed": 21719,
+    "synthetic": true,
+    "attributes": {
+      "genero": {
+        "approval_rate": {
+          "M": 0.6886051080550099,
+          "F": 0.6960285132382892
+        },
+        "disparate_impact": 0.9893
+      },
+      "zona": {
+        "approval_rate": {
+          "regiones": 0.7055837563451777,
+          "RM": 0.6764866339334424
+        },
+        "disparate_impact": 0.9588
+      }
+    },
+    "disparate_impact_min": 0.9588,
+    "protected_input_rejected": true
+  },
+  "llm_usage": {
+    "calls_ok": 0.0,
+    "input_tokens": 0.0,
+    "output_tokens": 0.0,
+    "cost_usd": 0.0
+  },
+  "gates": [
+    [
+      "golden_pass_rate",
+      1.0,
+      1.0,
+      true
+    ],
+    [
+      "redteam_block_recall",
+      1.0,
+      1.0,
+      true
+    ],
+    [
+      "redteam_false_positive_rate",
+      0.0,
+      0.1,
+      true
+    ],
+    [
+      "injection_recall",
+      1.0,
+      0.9,
+      true
+    ],
+    [
+      "injection_false_positive_rate",
+      0.0,
+      0.1,
+      true
+    ],
+    [
+      "fairness_disparate_impact_min",
+      0.9588,
+      0.8,
+      true
+    ]
+  ],
+  "passed": true
+}

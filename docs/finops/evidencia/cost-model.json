@@ -1,0 +1,106 @@
+{
+  "prices_reference": "AWS us-east-1 on-demand (lista pública)",
+  "region_factor_assumed": 1.5,
+  "prices": {
+    "eks_cluster_h": 0.1,
+    "fargate_vcpu_h": 0.04048,
+    "fargate_gb_h": 0.004445,
+    "aurora_acu_h": 0.12,
+    "aurora_storage_gb_mo": 0.1,
+    "msk_serverless_cluster_h": 0.75,
+    "msk_partition_h": 0.0015,
+    "nat_gw_h": 0.045,
+    "alb_h": 0.0225,
+    "api_gw_per_million": 3.5,
+    "cw_logs_gb": 0.5,
+    "secret_mo": 0.4
+  },
+  "before": {
+    "label": "antes",
+    "fargate_tier_per_pod": [
+      0.25,
+      0.5
+    ],
+    "hpa_max": 20,
+    "prod": {
+      "env": "prod",
+      "lines": {
+        "EKS plano de control": 109.5,
+        "Fargate (3 servicios x 3 pods)": 121.64,
+        "Aurora Serverless v2 (cómputo mínimo)": 131.4,
+        "Aurora almacenamiento 20 GB": 3.0,
+        "MSK Serverless (clúster + 30 particiones)": 870.53,
+        "NAT Gateway (1)": 49.28,
+        "ALB del Ingress": 24.64,
+        "API Gateway": 1.58,
+        "CloudWatch Logs": 7.5,
+        "Secrets Manager (5)": 3.0
+      },
+      "total": 1322.07
+    },
+    "staging": {
+      "env": "staging",
+      "lines": {
+        "EKS plano de control": 109.5,
+        "Fargate (3 servicios x 3 pods)": 121.64,
+        "Aurora Serverless v2 (cómputo mínimo)": 131.4,
+        "Aurora almacenamiento 20 GB": 3.0,
+        "MSK Serverless (clúster + 30 particiones)": 870.53,
+        "NAT Gateway (1)": 49.28,
+        "ALB del Ingress": 24.64,
+        "API Gateway": 0.26,
+        "CloudWatch Logs": 2.25,
+        "Secrets Manager (5)": 3.0
+      },
+      "total": 1315.5
+    },
+    "total_expected": 2637.57,
+    "total_ceiling": 3326.84
+  },
+  "after": {
+    "label": "despues",
+    "fargate_tier_per_pod": [
+      0.25,
+      0.5
+    ],
+    "hpa_max": 8,
+    "prod": {
+      "env": "prod",
+      "lines": {
+        "EKS plano de control": 109.5,
+        "Fargate (3 servicios x 3 pods)": 121.64,
+        "Aurora Serverless v2 (cómputo mínimo)": 131.4,
+        "Aurora almacenamiento 20 GB": 3.0,
+        "MSK Serverless (clúster + 30 particiones)": 870.53,
+        "NAT Gateway (1)": 49.28,
+        "ALB del Ingress": 24.64,
+        "API Gateway": 1.58,
+        "CloudWatch Logs": 7.5,
+        "Secrets Manager (5)": 3.0
+      },
+      "total": 1322.07
+    },
+    "staging": {
+      "env": "staging",
+      "lines": {
+        "EKS plano de control": 109.5,
+        "Fargate (3 servicios x 1 pods)": 14.66,
+        "Aurora Serverless v2 (cómputo mínimo)": 23.76,
+        "Aurora almacenamiento 20 GB": 3.0,
+        "MSK Serverless (clúster + 30 particiones)": 870.53,
+        "NAT Gateway (1)": 49.28,
+        "ALB del Ingress": 24.64,
+        "API Gateway": 0.26,
+        "CloudWatch Logs": 2.25,
+        "Secrets Manager (5)": 3.0
+      },
+      "total": 1100.88
+    },
+    "total_expected": 2422.95,
+    "total_ceiling": 2625.68
+  },
+  "saving_expected_usd": 214.62,
+  "saving_expected_pct": 0.0814,
+  "saving_ceiling_usd": 701.16,
+  "msk_share_of_after": 0.7186
+}

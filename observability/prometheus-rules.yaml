@@ -1,0 +1,87 @@
+# S18 · Reglas de grabación y alertas de los SLOs (docs/resiliencia/slos.md).
+# Formato PrometheusRule (Prometheus Operator / kube-prometheus-stack). No está en
+# k8s/kustomization.yaml porque el CRD lo instala el stack de observabilidad, no la app.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: scoring-api-slos
+  namespace: crediscore
+  labels:
+    app.kubernetes.io/name: scoring-api
+    app.kubernetes.io/part-of: crediscore
+spec:
+  groups:
+    - name: scoring-api.sli
+      interval: 30s
+      rules:
+        # SLO 1 · proporción de errores de originación (5xx / total)
+        - record: crediscore:originacion_error_ratio:rate5m
+          expr: |
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST",status=~"5.."}[5m]))
+            /
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST"}[5m]))
+        - record: crediscore:originacion_error_ratio:rate30m
+          expr: |
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST",status=~"5.."}[30m]))
+            /
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST"}[30m]))
+        - record: crediscore:originacion_error_ratio:rate1h
+          expr: |
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST",status=~"5.."}[1h]))
+            /
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST"}[1h]))
+        - record: crediscore:originacion_error_ratio:rate6h
+          expr: |
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST",status=~"5.."}[6h]))
+            /
+            sum(rate(crediscore_http_requests_total{route="/v1/credit-applications",method="POST"}[6h]))
+        # SLO 2 · p95 de aceptación
+        - record: crediscore:aceptacion_latency_p95:5m
+          expr: |
+            histogram_quantile(0.95, sum by (le) (
+              rate(crediscore_http_request_duration_seconds_bucket{route="/v1/credit-applications"}[5m])))
+        # SLO 4 · proporción de explicaciones servidas desde la plantilla (fallback)
+        - record: crediscore:explicacion_fallback_ratio:rate15m
+          expr: |
+            sum(rate(crediscore_explanations_total{source="template"}[15m]))
+            / sum(rate(crediscore_explanations_total[15m]))
+
+    - name: scoring-api.alertas
+      rules:
+        # Presupuesto 99,5 % -> error permitido 0,005. Burn rate 14,4x = se agota en ~2 días.
+        - alert: OriginacionBurnRateRapido
+          expr: |
+            crediscore:originacion_error_ratio:rate1h > (14.4 * 0.005)
+            and crediscore:originacion_error_ratio:rate5m > (14.4 * 0.005)
+          labels: {severity: page, slo: originacion}
+          annotations:
+            summary: "Originación quemando el presupuesto de error 14,4x"
+            runbook: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/resiliencia/runbook.md#r1"
+        - alert: OriginacionBurnRateLento
+          expr: |
+            crediscore:originacion_error_ratio:rate6h > (6 * 0.005)
+            and crediscore:originacion_error_ratio:rate30m > (6 * 0.005)
+          labels: {severity: ticket, slo: originacion}
+          annotations:
+            summary: "Originación quemando el presupuesto de error 6x"
+            runbook: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/resiliencia/runbook.md#r1"
+        - alert: LatenciaAceptacionAlta
+          expr: crediscore:aceptacion_latency_p95:5m > 0.3
+          for: 10m
+          labels: {severity: ticket, slo: aceptacion}
+          annotations:
+            summary: "p95 de aceptación sobre 300 ms"
+            runbook: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/resiliencia/runbook.md#r2"
+        - alert: ExplicadorCircuitoAbierto
+          expr: max(crediscore_circuit_state) == 2
+          for: 5m
+          labels: {severity: ticket, slo: explicacion}
+          annotations:
+            summary: "Circuit breaker del LLM abierto: explicaciones salen de la plantilla"
+            runbook: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/resiliencia/runbook.md#r3"
+        - alert: GuardrailDatoSensible
+          expr: increase(crediscore_guardrail_violations_total{rule=~"pii|protected_attribute"}[10m]) > 0
+          labels: {severity: page, slo: calidad-explicacion}
+          annotations:
+            summary: "El LLM intentó escribir PII o un atributo protegido (bloqueado por el guardrail)"
+            runbook: "https://github.com/4Noisy/-equipo-lospapus--crediscore-/blob/main/docs/resiliencia/runbook.md#r4"

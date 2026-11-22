@@ -4,6 +4,18 @@
 
 **CrediScore** es una plataforma fintech diseñada para automatizar la evaluación de solicitudes de microcréditos en tiempo real mediante modelos de Machine Learning y motores de reglas antifraude. El sistema permite procesar decisiones crediticias seguras en menos de 60 segundos, operando bajo una arquitectura orientada a eventos (*event-driven*), alta concurrencia y estricto cumplimiento normativo de la CMF y principios de Finanzas Abiertas.
 
+### Por qué existe (y por qué está hecho así)
+
+Una persona que pide un microcrédito hoy espera días y, si le dicen que no, recibe un código que no entiende. CrediScore decide en segundos, no usa género ni comuna, y explica cada decisión en lenguaje claro con el derecho a pedir revisión humana (Ley 21.719, art. 8 bis).
+
+Tres decisiones definen el producto, cada una con sus alternativas descartadas:
+
+1. **Event-driven** ([ADR 0002](docs/adr/0002-estilo-arquitectonico.md)): el fraude necesita < 500 ms y el scoring < 60 s; un flujo síncrono los acopla.
+2. **El LLM explica, no decide** ([ADR 0008](docs/adr/0008-feature-ia-explicador.md)): la decisión tiene que ser reproducible para la CMF. El LLM solo redacta, sin ver datos personales, y con una plantilla de respaldo.
+3. **Degradar con elegancia y decir dónde perdemos datos** ([ADR 0009](docs/adr/0009-resiliencia-degradacion.md)): si el LLM cae, la API sigue respondiendo (medido en el game day). El estado en memoria es nuestro mayor riesgo y está declarado, medido y en la primera fila del [roadmap](docs/defensa/roadmap.md).
+
+**Defensa final (S18):** [guion](docs/defensa/guion-pitch.md) · [evidencia por criterio de la rúbrica](docs/defensa/evidencia-rubrica.md) · [Q&A](docs/defensa/qa-panel.md).
+
 ---
 
 ###  Objetivos Principales
@@ -57,6 +69,7 @@ Reglas de trabajo, Definition of Done y política de IA: [CHARTER.md](CHARTER.md
 | **S07** — Contenedores, K8s e IaC | [Dockerfile](Dockerfile) · [Manifiestos K8s](k8s/) · [Terraform](terraform/main.tf) · [ADR 0006](docs/adr/0006-plataforma-k8s.md) |
 | **S08** — CI/CD y GitOps | [Pipeline CI](.github/workflows/ci.yml) · [Repo GitOps](https://github.com/4Noisy/gitops-repo) · [ADR 0005](docs/adr/0005-gitops-strategy.md) · [Evidencia](docs/s08/evidencia.md) |
 | **S09** — DevSecOps I | [Workflow de seguridad](.github/workflows/security.yml) · [Reglas Semgrep](.semgrep/) · [Threat model STRIDE](docs/threat-model.md) · [Secret scanning](docs/security/secret-scanning.md) · [Triage y excepciones](#seguridad-triage-y-excepciones-vex) |
+| **S18** — Defensa final | [C4 L3](docs/c4/l3-component-scoring-api.md) · [ADR 0008 IA](docs/adr/0008-feature-ia-explicador.md) · [ADR 0009 resiliencia](docs/adr/0009-resiliencia-degradacion.md) · [ADR 0010 FinOps](docs/adr/0010-finops.md) · [Model card](docs/ia/model-card.md) · [Evaluación IA](eval/) · [SLOs](docs/resiliencia/slos.md) · [DR](docs/resiliencia/dr-plan.md) · [Game day](docs/resiliencia/game-day.md) · [Runbook](docs/resiliencia/runbook.md) · [Post-mortems](docs/resiliencia/post-mortem-2026-11-22-circuit-breaker.md) · [Costos](docs/finops/costos.md) · [Tagging](docs/finops/tagging.md) · [Defensa](docs/defensa/) |
 | **S10** — DevSecOps II (supply chain) | [Firma y SLSA en el CI](.github/workflows/ci.yml) · [Pruebas de admisión y runtime](.github/workflows/supply-chain.yml) · [ADR 0007](docs/adr/0007-supply-chain.md) · [Policy Kyverno](k8s/policies/require-signature.yaml) · [Reglas Falco](falco/) · [Evidencia](docs/s10/evidencia.md) |
 
 Los diagramas C4 se editan en draw.io (`docs/c4/*.xml`) y el DER en PlantUML (`docs/data/der.puml`).
@@ -86,6 +99,24 @@ Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneD
 | Kyverno | No hay excepciones: una imagen sin firma del CI de `main` no entra | Si hace falta una imagen externa, se agrega su firma a la policy por PR |
 
 **4. VEX formal.** Si el cliente o un auditor pide la declaración en formato estándar, la excepción de Trivy se escribe como documento OpenVEX y se pasa a Trivy con `--vex`. El SBOM CycloneDX del run (artefacto `sbom-cyclonedx`) sirve para revisar si un CVE nuevo nos afecta, incluso en dependencias transitivas.
+
+---
+
+### Correr todo en local
+
+```bash
+python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt -r requirements-dev.txt
+
+python -m pytest --cov=src                           # 55 tests: unitarios, contrato, integración, guardrails
+python -m eval.run_eval                              # evaluación de la feature IA (modo plantilla, sin costo)
+python -m src.main                                   # API en :8080
+python scripts/smoke_e2e.py http://localhost:8080    # flujo crítico de la demo (9 pasos)
+python scripts/gameday_local.py                      # game day local (~2 min): línea base, LLM caído, caída del proceso
+python scripts/finops_cost_model.py                  # modelo de costo mensual
+```
+
+Feature IA con Claude: `EXPLAINER_MODE=llm` y credenciales de Anthropic (`ANTHROPIC_API_KEY`). Sin eso, la explicación sale de la plantilla determinística, que es el modo por defecto ([model card](docs/ia/model-card.md)).
 
 ---
 

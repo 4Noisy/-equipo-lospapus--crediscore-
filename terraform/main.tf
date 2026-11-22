@@ -48,6 +48,26 @@ variable "namespace" {
   default     = "crediscore"
 }
 
+variable "environment" {
+  description = "Ambiente (dev | staging | prod); va en las etiquetas de costo"
+  type        = string
+  default     = "dev"
+}
+
+# ---------------------------------------------------------------------------
+# Tagging FinOps (S18 · docs/finops/tagging.md)
+# Las mismas claves se usan como labels en Kubernetes y como tags en AWS
+# (default_tags del provider aws cuando los recursos de AWS entren a Terraform).
+# ---------------------------------------------------------------------------
+locals {
+  finops_tags = {
+    "cost-center" = "crediscore-scoring"
+    owner         = "lospapus"
+    environment   = var.environment
+    "managed-by"  = "terraform"
+  }
+}
+
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
@@ -63,11 +83,11 @@ resource "kubernetes_namespace_v1" "crediscore" {
   metadata {
     name = var.namespace
 
-    labels = {
+    labels = merge(local.finops_tags, {
       "app.kubernetes.io/part-of" = "crediscore"
       iniciativa                  = "crediscore"
       equipo                      = "los-papus"
-    }
+    })
   }
 }
 

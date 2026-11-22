@@ -1,0 +1,54 @@
+name: ai-eval-llm
+
+# S18 · Evaluación de la feature IA con el LLM real (Claude).
+# Manual a propósito: cada corrida gasta tokens (~26 llamadas, costo en el resumen).
+# Requiere el secret ANTHROPIC_API_KEY (rotación y dueño: docs/security/secret-scanning.md).
+# El CI normal (ci.yml > quality) evalúa el modo plantilla en cada PR, sin costo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Modelo a evaluar
+        default: claude-opus-5-5
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  eval-llm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPLAINER_MODE: llm
+      EXPLAINER_MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Evaluación con LLM real
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Falta el secret ANTHROPIC_API_KEY"
+            exit 1
+          fi
+          python -m eval.run_eval
+          cat eval/results/llm.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir reporte
+        if: always() && hashFiles('eval/results/llm.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-eval-llm
+          path: eval/results/llm.*

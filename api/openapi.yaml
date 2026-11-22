@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CrediScore API
-  version: 1.0.0
+  version: 1.1.0
   summary: API pública de originación y scoring de microcréditos.
   description: |
     Contrato *contract-first* de CrediScore. Lo consumen los partners comerciales (HU5),
@@ -201,6 +201,35 @@ paths:
                     model_version: scoring-xgb-1.3.0
                     decided_by: model
                     decided_at: '2026-10-01T14:22:58Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /credit-applications/{applicationId}/explanation:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [Credit Applications]
+      operationId: getCreditApplicationExplanation
+      summary: Explicación de la decisión en lenguaje claro (feature IA)
+      description: |
+        Redacta la decisión para el solicitante, en español y sin jerga. El texto lo genera
+        un LLM (`source: llm`) o, si el LLM no está disponible o su salida no pasa los
+        guardrails, una plantilla determinística (`source: template`). La decisión no cambia:
+        el LLM solo redacta. Siempre informa el derecho a revisión humana (Ley 21.719,
+        art. 8 bis). Agregado en 1.1.0, cambio compatible (ver `docs/api/versioning-policy.md`).
+      security:
+        - oauth2: [applications:read]
+      responses:
+        '200':
+          description: Explicación disponible.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Explanation'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -572,6 +601,57 @@ components:
           type: string
           enum: [model, analyst]
         decided_at:
+          type: string
+          format: date-time
+    Explanation:
+      type: object
+      required: [application_id, outcome, text, source, prompt_version, guardrails, human_review, generated_at]
+      properties:
+        application_id:
+          type: string
+          format: uuid
+        outcome:
+          type: string
+          enum: [approved, rejected, review]
+        text:
+          type: string
+          minLength: 80
+          maxLength: 900
+          description: Párrafo para el solicitante. Nunca incluye el RUT ni atributos protegidos.
+        source:
+          type: string
+          enum: [llm, template, cache]
+        model:
+          type: [string, 'null']
+          description: Modelo que redactó el texto; `null` si salió de la plantilla.
+        prompt_version:
+          type: string
+        guardrails:
+          type: object
+          required: [passed, output_violations, input_flags]
+          properties:
+            passed:
+              type: boolean
+            output_violations:
+              type: array
+              items:
+                type: string
+            input_flags:
+              type: array
+              items:
+                type: string
+                enum: [prompt_injection]
+            fallback_reason:
+              type: [string, 'null']
+        human_review:
+          type: object
+          required: [available, legal_basis]
+          properties:
+            available:
+              type: boolean
+            legal_basis:
+              type: string
+        generated_at:
           type: string
           format: date-time
     ReevaluationInput:
