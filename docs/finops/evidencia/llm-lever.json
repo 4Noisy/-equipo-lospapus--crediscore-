@@ -1,0 +1,53 @@
+{
+  "model": "claude-opus-5-5",
+  "price_per_mtok_usd": [
+    4.0,
+    20.0
+  ],
+  "assumptions": {
+    "applications": 4000,
+    "views_per_application": 2,
+    "monthly_applications": 30000,
+    "chars_per_token": 3.5,
+    "thinking_tokens_est": 200
+  },
+  "results": [
+    {
+      "config": "A_antes_sin_cache_todo_llm",
+      "explanations_served": 8000,
+      "llm_calls": 8000,
+      "llm_calls_per_1000_explanations": 1000.0,
+      "input_tokens_est": 2747432.0,
+      "output_tokens_est": 2027884.0,
+      "cost_usd_4000_apps_est": 51.5474,
+      "cost_usd_per_application_est": 0.012887,
+      "cost_usd_month_est": 386.61,
+      "guardrail_violations": 0.0
+    },
+    {
+      "config": "B_cache",
+      "explanations_served": 8000,
+      "llm_calls": 3483,
+      "llm_calls_per_1000_explanations": 435.4,
+      "input_tokens_est": 1195982.0,
+      "output_tokens_est": 882766.0,
+      "cost_usd_4000_apps_est": 22.4392,
+      "cost_usd_per_application_est": 0.00561,
+      "cost_usd_month_est": 168.29,
+      "guardrail_violations": 0.0
+    },
+    {
+      "config": "C_cache_y_solo_review_rejected",
+      "explanations_served": 8000,
+      "llm_calls": 1042,
+      "llm_calls_per_1000_explanations": 130.2,
+      "input_tokens_est": 355883.0,
+      "output_tokens_est": 262886.0,
+      "cost_usd_4000_apps_est": 6.6813,
+      "cost_usd_per_application_est": 0.00167,
+      "cost_usd_month_est": 50.11,
+      "guardrail_violations": 0.0
+    }
+  ],
+  "reduction_calls_A_to_C": 0.8698
+}

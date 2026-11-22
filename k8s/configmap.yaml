@@ -1,6 +1,7 @@
 # Config no sensible leída realmente por src/main.py (os.getenv):
 #   - APP_PORT  -> puerto de uvicorn (Dockerfile expone 8080).
 #   - LOG_LEVEL -> nivel del logger "scoring-api".
+#   - EXPLAINER_MODE -> template | llm (feature IA, S18).
 # ENVIRONMENT es metadata para logs/alertas, no la lee el código todavía.
 # El lab aún no implementa persistencia (Aurora) ni el Event Bus (Kafka): cuando se
 # agreguen (ADR 0004), sus endpoints se suman aquí, no antes.
@@ -17,3 +18,8 @@ data:
   APP_PORT: "8080"
   LOG_LEVEL: "info"
   ENVIRONMENT: "dev"
+  # S18 · Feature IA (src/explainer.py). "template" no llama a ningún servicio externo, así
+  # que la NetworkPolicy (solo DNS) y la regla Falco de conexión saliente siguen valiendo.
+  # Pasar a "llm" exige: secret ANTHROPIC_API_KEY (ExternalSecret), egress 443 al proveedor
+  # y excepción Falco para ese destino (ADR 0008).
+  EXPLAINER_MODE: "template"

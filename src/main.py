@@ -4,7 +4,8 @@ Implementa un subconjunto del contrato api/openapi.yaml (S05):
   POST /v1/credit-applications                         (idempotente por Idempotency-Key)
   GET  /v1/credit-applications/{applicationId}
   GET  /v1/credit-applications/{applicationId}/decision
-y expone /health y /ready para las probes de Kubernetes.
+  GET  /v1/credit-applications/{applicationId}/explanation   (feature IA, S18 · src/explainer.py)
+y expone /health y /ready para las probes de Kubernetes y /metrics para Prometheus (SLOs).
 
 Limitaciones conocidas (placeholder del lab):
 - El almacenamiento es en memoria, por réplica. Persistencia real: Aurora PostgreSQL (ADR 0004).
@@ -16,6 +17,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Literal
@@ -23,8 +25,11 @@ from typing import Literal
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
+
+from src import metrics
+from src.explainer import Explainer
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "info").upper(),
@@ -32,7 +37,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("scoring-api")
 
-app = FastAPI(title="CrediScore Scoring API", version="0.1.0")
+app = FastAPI(title="CrediScore Scoring API", version="0.2.0")
 
 MODEL_VERSION = "placeholder-0.1.0"
 
@@ -60,11 +65,24 @@ class Decision(BaseModel):
     decided_at: str
 
 
+class Explanation(BaseModel):
+    application_id: uuid.UUID
+    outcome: Literal["approved", "rejected", "review"]
+    text: str
+    source: Literal["llm", "template", "cache"]
+    model: str | None
+    prompt_version: str
+    guardrails: dict
+    human_review: dict
+    generated_at: str
+
+
 # ---------- Estado en memoria (placeholder) ----------
 
 APPLICATIONS: dict[str, dict] = {}
 DECISIONS: dict[str, dict] = {}
 IDEMPOTENCY: dict[str, tuple[str, dict]] = {}  # key -> (hash del cuerpo, respuesta)
+EXPLAINER = Explainer()
 
 
 def now() -> str:
@@ -90,7 +108,15 @@ def problem(status: int, title: str, detail: str, trace_id: str) -> JSONResponse
 @app.middleware("http")
 async def trace_id_middleware(request: Request, call_next):
     request.state.trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
+    start = time.perf_counter()
     response = await call_next(request)
+    # Métricas por plantilla de ruta (no por ID, para no explotar la cardinalidad)
+    route = getattr(request.scope.get("route"), "path", "unmatched")
+    metrics.observe(route, time.perf_counter() - start)
+    metrics.inc(
+        "crediscore_http_requests_total",
+        {"route": route, "method": request.method, "status": str(response.status_code)},
+    )
     response.headers.setdefault("X-Trace-Id", request.state.trace_id)
     # Headers de seguridad (S10, los revisa el DAST con ZAP):
     # no adivinar el tipo de contenido, no cachear datos financieros, no embeber en iframes.
@@ -148,6 +174,11 @@ def health():
 @app.get("/ready")
 def ready():
     return {"status": "ready"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics():
+    return PlainTextResponse(metrics.render(), media_type="text/plain; version=0.0.4")
 
 
 @app.post("/v1/credit-applications", status_code=201)
@@ -209,6 +240,35 @@ def get_credit_application_decision(application_id: uuid.UUID):
     if decision is None:
         raise HTTPException(404, "La solicitud no existe o aún no tiene decisión.")
     return decision
+
+
+@app.get("/v1/credit-applications/{application_id}/explanation", response_model=Explanation)
+def get_credit_application_explanation(application_id: uuid.UUID):
+    """Explicación en lenguaje claro de la decisión (feature IA, ver docs/ia/model-card.md)."""
+    decision = DECISIONS.get(str(application_id))
+    application = APPLICATIONS.get(str(application_id))
+    if decision is None or application is None:
+        raise HTTPException(404, "La solicitud no existe o aún no tiene decisión.")
+    exp = EXPLAINER.explain(decision, application)
+    return Explanation(
+        application_id=application_id,
+        outcome=decision["outcome"],
+        text=exp.text,
+        source=exp.source,
+        model=exp.model,
+        prompt_version=exp.prompt_version,
+        guardrails={
+            "passed": not exp.violations,
+            "output_violations": exp.violations,
+            "input_flags": exp.input_flags,
+            "fallback_reason": exp.fallback_reason,
+        },
+        human_review={
+            "available": True,
+            "legal_basis": "Ley 21.719, art. 8 bis (decisiones individuales automatizadas)",
+        },
+        generated_at=now(),
+    ).model_dump(mode="json")
 
 
 if __name__ == "__main__":

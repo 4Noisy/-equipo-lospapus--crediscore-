@@ -58,6 +58,16 @@ proyecto. Flux es más liviano y encaja bien en flujos 100 % Git, pero para un
 equipo de seis personas con roles distintos pesa más la visibilidad que el
 footprint.
 
+## Alternativas descartadas
+
+Resumen comparativo de lo evaluado arriba (agregado en la S18 para dejar explícito el criterio):
+
+| Alternativa | Criterio que la descarta |
+| :--- | :--- |
+| **Push-based** (`kubectl apply` / `helm upgrade` desde el CI) | El CI tendría credenciales del clúster (superficie de ataque); el drift no se detecta ni se corrige solo; el rollback no queda como un commit auditable. |
+| **Flux** | Más liviano y 100 % Git, pero sin la UI de Argo CD para mostrar Synced/Healthy al equipo y a un auditor, ni RBAC por proyecto. Para 6 personas con roles distintos pesa más la visibilidad que el footprint. |
+| **Manifiestos en el mismo repo de la app** (sin `gitops-repo`) | Mezcla el historial de código con el de despliegues: cada promote dispararía el CI de la app y la auditoría de "qué corre en prod" exigiría filtrar commits. |
+
 ## Consecuencias
 
 **Positivas**

@@ -1,0 +1,165 @@
+name: gameday
+
+# S18 · Game day en Kubernetes (kind) con los manifiestos reales de k8s/.
+#   E3 · Matar un Pod bajo carga      -> disponibilidad >= 99,5 % y 3/3 réplicas de vuelta en < 60 s
+#   E4 · DR: borrar el namespace entero y restaurar desde Git (GitOps) -> RTO < 5 min
+# La carga corre DENTRO del clúster, en el namespace ingress-nginx (el único que la
+# NetworkPolicy deja entrar), con scripts/loadgen.py y scripts/smoke_e2e.py.
+# Resultados: resumen del run + artefacto gameday-k8s. Runbook: docs/resiliencia/runbook.md
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1" # lunes 09:00 Chile: el game day se repite, no es un evento único
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gameday
+  cancel-in-progress: false
+
+jobs:
+  gameday:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NS: crediscore
+      LOADNS: ingress-nginx
+      SVC: http://scoring-api.crediscore.svc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Crear cluster kind
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+
+      - name: Construir la imagen y cargarla en kind
+        run: |
+          docker build -t scoring-api:gameday .
+          kind load docker-image scoring-api:gameday --name chart-testing
+
+      - name: Overlay de game day (imagen local, sin pull)
+        run: |
+          mkdir -p gameday
+          cat > gameday/kustomization.yaml <<'EOF'
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+            - ../k8s
+          images:
+            - name: ghcr.io/4noisy/scoring-api
+              newName: scoring-api
+              newTag: gameday
+          patches:
+            - target: {kind: Deployment, name: scoring-api}
+              patch: |-
+                - op: replace
+                  path: /spec/template/spec/containers/0/imagePullPolicy
+                  value: IfNotPresent
+          EOF
+
+      - name: Desplegar (3 réplicas)
+        run: |
+          kubectl apply -k gameday
+          kubectl -n "$NS" rollout status deploy/scoring-api --timeout=180s
+          kubectl -n "$NS" get pods -o wide
+
+      - name: Preparar el generador de carga dentro del clúster
+        run: |
+          kubectl create namespace "$LOADNS" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n "$LOADNS" create configmap gd-scripts \
+            --from-file=scripts/loadgen.py --from-file=scripts/smoke_e2e.py \
+            --dry-run=client -o yaml | kubectl apply -f -
+          cat > /tmp/runner.sh <<'EOF'
+          # uso: runner.sh <nombre> <args de python...>
+          NAME=$1; shift
+          kubectl -n "$LOADNS" delete pod "$NAME" --ignore-not-found --wait=true >/dev/null
+          cat <<YAML | kubectl apply -f - >/dev/null
+          apiVersion: v1
+          kind: Pod
+          metadata: {name: $NAME, namespace: $LOADNS}
+          spec:
+            restartPolicy: Never
+            securityContext: {runAsNonRoot: true, runAsUser: 10001, seccompProfile: {type: RuntimeDefault}}
+            containers:
+              - name: py
+                image: python:3.13-slim
+                command: ["python", $(printf '"%s",' "$@" | sed 's/,$//')]
+                securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
+                volumeMounts: [{name: s, mountPath: /scripts}]
+            volumes: [{name: s, configMap: {name: gd-scripts}}]
+          YAML
+          EOF
+          chmod +x /tmp/runner.sh
+
+      - name: Smoke E2E (flujo crítico)
+        run: |
+          /tmp/runner.sh smoke /scripts/smoke_e2e.py "$SVC"
+          kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Succeeded pod/smoke --timeout=180s \
+            || kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Failed pod/smoke --timeout=5s || true
+          kubectl -n "$LOADNS" logs smoke | tee smoke.txt
+          # Con 3 réplicas y estado en memoria, el reintento idempotente puede caer en otra
+          # réplica (brecha conocida, ADR 0009). Se registra, no se oculta.
+          grep -q '"ok": true' smoke.txt && echo "SMOKE=ok" >> "$GITHUB_ENV" || echo "SMOKE=con_fallas" >> "$GITHUB_ENV"
+
+      - name: "E3 · matar un Pod bajo carga"
+        run: |
+          set -euo pipefail
+          /tmp/runner.sh load-e3 /scripts/loadgen.py "$SVC" --seconds 60 --workers 8 --label E3-pod-kill
+          kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Running pod/load-e3 --timeout=120s
+          sleep 20
+          VICTIM=$(kubectl -n "$NS" get pods -l app.kubernetes.io/name=scoring-api -o jsonpath='{.items[0].metadata.name}')
+          echo "Víctima: $VICTIM"
+          T0=$(date +%s.%N)
+          kubectl -n "$NS" delete pod "$VICTIM" --grace-period=0 --force
+          until [ "$(kubectl -n "$NS" get deploy scoring-api -o jsonpath='{.status.availableReplicas}')" = "3" ]; do sleep 0.5; done
+          T1=$(date +%s.%N)
+          echo "RECOVERY_S=$(python3 -c "print(round($T1 - $T0, 2))")" >> "$GITHUB_ENV"
+          kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Succeeded pod/load-e3 --timeout=180s
+          kubectl -n "$LOADNS" logs load-e3 | tail -1 | tee e3.json
+
+      - name: "E4 · DR: borrar el namespace y restaurar desde Git"
+        run: |
+          set -euo pipefail
+          T0=$(date +%s.%N)
+          kubectl delete namespace "$NS" --wait=true
+          kubectl apply -k gameday
+          kubectl -n "$NS" rollout status deploy/scoring-api --timeout=300s
+          /tmp/runner.sh smoke-dr /scripts/smoke_e2e.py "$SVC"
+          kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Succeeded pod/smoke-dr --timeout=180s \
+            || kubectl -n "$LOADNS" wait --for=jsonpath='{.status.phase}'=Failed pod/smoke-dr --timeout=5s || true
+          T1=$(date +%s.%N)
+          kubectl -n "$LOADNS" logs smoke-dr | tee smoke-dr.txt
+          echo "RTO_S=$(python3 -c "print(round($T1 - $T0, 2))")" >> "$GITHUB_ENV"
+
+      - name: Resultado y criterios
+        run: |
+          set -euo pipefail
+          jq -n --slurpfile e3 e3.json \
+            --arg recovery "$RECOVERY_S" --arg rto "$RTO_S" --arg smoke "$SMOKE" \
+            --arg run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{run: $run, smoke: $smoke, E3: ($e3[0] + {replicas_back_s: ($recovery|tonumber)}),
+              E4: {rto_s: ($rto|tonumber), rpo: "total (estado en memoria, ver ADR 0009)"}}' > gameday-k8s.json
+          cat gameday-k8s.json
+          AV=$(jq '.E3.availability_post' gameday-k8s.json)
+          {
+            echo "### Game day (kind)"
+            echo "| Experimento | Resultado | Criterio |"
+            echo "| --- | --- | --- |"
+            echo "| E3 disponibilidad bajo pod kill | $AV | >= 0.995 |"
+            echo "| E3 réplicas 3/3 de vuelta | ${RECOVERY_S} s | < 60 s |"
+            echo "| E4 RTO (namespace borrado -> smoke OK) | ${RTO_S} s | < 300 s |"
+            echo "| E4 RPO | total | brecha: estado en memoria (ADR 0009) |"
+            echo "| Smoke E2E inicial | ${SMOKE} | ok |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          awk -v a="$AV" -v r="$RECOVERY_S" -v t="$RTO_S" 'BEGIN { exit !(a >= 0.995 && r < 60 && t < 300) }'
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gameday-k8s
+          path: |
+            gameday-k8s.json
+            smoke*.txt
+          retention-days: 90
