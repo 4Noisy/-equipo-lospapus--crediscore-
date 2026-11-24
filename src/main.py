@@ -25,10 +25,12 @@ from typing import Literal
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from src import metrics
+from pathlib import Path
+
+from src import fraud, metrics
 from src.explainer import Explainer
 
 logging.basicConfig(
@@ -82,7 +84,9 @@ class Explanation(BaseModel):
 APPLICATIONS: dict[str, dict] = {}
 DECISIONS: dict[str, dict] = {}
 IDEMPOTENCY: dict[str, tuple[str, dict]] = {}  # key -> (hash del cuerpo, respuesta)
+FRAUDS: dict[str, dict] = {}
 EXPLAINER = Explainer()
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 def now() -> str:
@@ -215,8 +219,14 @@ def create_credit_application(
     APPLICATIONS[app_id] = application
     IDEMPOTENCY[key] = (body_hash, application)
 
+    # Antifraude simulado (MVP): si el riesgo es alto, la decisión pasa a revisión humana.
+    previous = sum(1 for a in APPLICATIONS.values() if a["rut"] == body.rut and a["id"] != app_id)
+    FRAUDS[app_id] = fraud.check(application, previous)
+
     # En producción la decisión es asíncrona (Kafka). Aquí se calcula al tiro para el demo.
     DECISIONS[app_id] = decide(app_id, body)
+    if FRAUDS[app_id]["action"] == "send_to_review" and DECISIONS[app_id]["outcome"] != "rejected":
+        DECISIONS[app_id].update(outcome="review", risk_category="high", reasons=["FRAUD_SUSPECTED"])
     log.info("solicitud creada id=%s trace_id=%s", app_id, trace_id)
 
     return JSONResponse(
@@ -240,6 +250,21 @@ def get_credit_application_decision(application_id: uuid.UUID):
     if decision is None:
         raise HTTPException(404, "La solicitud no existe o aún no tiene decisión.")
     return decision
+
+
+@app.get("/v1/credit-applications/{application_id}/fraud-check")
+def get_credit_application_fraud_check(application_id: uuid.UUID):
+    """Resultado del antifraude simulado, con su tiempo de proceso (objetivo < 500 ms)."""
+    result = FRAUDS.get(str(application_id))
+    if result is None:
+        raise HTTPException(404, "La solicitud no existe o no tiene chequeo de fraude.")
+    return result
+
+
+@app.get("/", include_in_schema=False)
+def ui():
+    """Panel visual del MVP (HTML estático, sin build)."""
+    return FileResponse(STATIC_DIR / "index.html", media_type="text/html")
 
 
 @app.get("/v1/credit-applications/{application_id}/explanation", response_model=Explanation)

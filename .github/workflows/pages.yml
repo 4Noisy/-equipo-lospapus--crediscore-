@@ -1,0 +1,35 @@
+# Publica la demo visual (src/static) en GitHub Pages, rama gh-pages.
+# Sin servidor, la página corre la API simulada en el navegador (modo demo).
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["src/static/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # para actualizar la rama gh-pages
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Copiar la demo a gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp -r src/static /tmp/site && touch /tmp/site/.nojekyll
+          git switch gh-pages 2>/dev/null || git switch --orphan gh-pages
+          git rm -rq --ignore-unmatch . && git clean -fdq
+          cp -r /tmp/site/. .
+          git add -A
+          git diff --cached --quiet || git commit -m "pages: demo desde ${GITHUB_SHA::7}"
+          git push origin gh-pages

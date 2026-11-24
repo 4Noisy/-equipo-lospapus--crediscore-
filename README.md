@@ -103,6 +103,24 @@ Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneD
 
 ---
 
+### MVP en 1 comando (demo visual)
+
+**Demo en línea, sin instalar nada:** https://4noisy.github.io/-equipo-lospapus--crediscore-/ (la API corre simulada en el navegador con la misma lógica del servidor; con `?api=https://tu-servidor` usa un backend real).
+
+Abre **http://localhost:8080**: panel con el recorrido de cada solicitud (recibida → identidad → antifraude → decisión → explicación), medidor de latencia contra las metas de 500 ms y 60 s, puntaje, explicación IA, idempotencia, registro en vivo, salud del sistema y recorrido guiado.
+
+| Dónde | Comando |
+| :--- | :--- |
+| Docker (cualquier SO) | `docker compose up --build` |
+| Windows | `.
+un.ps1` |
+| Linux / macOS | `./run.sh` |
+| Python a mano | `pip install -r requirements.txt && python -m src.main` |
+
+El antifraude del MVP es simulado (reglas en `src/fraud.py`, endpoint `GET /v1/credit-applications/{id}/fraud-check`): con riesgo alto, la decisión pasa a revisión humana.
+
+---
+
 ### Correr todo en local
 
 ```bash

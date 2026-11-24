@@ -22,7 +22,7 @@ REGISTRY = Registry().with_resource("urn:crediscore", DRAFT202012.create_resourc
 client = TestClient(main.app)
 
 # Endpoints operativos que no son parte de la API pública
-OPERACIONALES = {"/health", "/ready", "/metrics", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
+OPERACIONALES = {"/", "/health", "/ready", "/metrics", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
 
 
 def validar(instancia, schema_name: str):
