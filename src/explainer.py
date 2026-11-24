@@ -52,6 +52,7 @@ REASON_TEXT = {
     "LOW_DEBT_RATIO": "el monto y el plazo solicitados significan una carga de deuda baja",
     "INCOME_PROOF_REQUIRED": "para este monto y plazo necesitamos confirmar tus ingresos",
     "AMOUNT_TOO_HIGH_FOR_TERM": "el monto solicitado es alto para el plazo elegido",
+    "FRAUD_SUSPECTED": "detectamos señales que requieren una verificación adicional de tu solicitud",
 }
 
 OUTCOME_TEXT = {

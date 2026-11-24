@@ -1,2 +1,6 @@
 # Excepciones del DAST (ZAP). Formato: id<TAB>IGNORE|WARN|FAIL<TAB>motivo
 # Cada línea nueva se agrega por PR, con el motivo escrito (ver README > triage y excepciones).
+
+# 100001 (Unexpected Content-Type) fuera de alcance SOLO para la raíz "/": ahí se sirve la demo visual
+# (src/static/index.html), que es HTML a propósito. El resto de la API sigue revisada por esta regla.
+100001	OUTOFSCOPE	https?://[^/]+/$

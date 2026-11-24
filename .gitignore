@@ -8,3 +8,5 @@ __pycache__/
 .venv/
 .coverage
 coverage.xml
+.frontend-slides/
+.venv/

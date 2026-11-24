@@ -234,6 +234,52 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /credit-applications/{applicationId}/fraud-check:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [Credit Applications]
+      operationId: getCreditApplicationFraudCheck
+      summary: Resultado del antifraude simulado (MVP)
+      description: |
+        Reglas determinísticas con puntaje de riesgo 0-100, banderas y tiempo de proceso
+        (`processing_ms`, objetivo < 500 ms). Con riesgo alto la decisión pasa a `review`
+        con el motivo `FRAUD_SUSPECTED`. Agregado en 1.2.0, cambio compatible.
+      security:
+        - oauth2: [applications:read]
+      responses:
+        '200':
+          description: Chequeo de fraude disponible.
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [application_id, risk_score, risk_level, flags, action, processing_ms]
+                properties:
+                  application_id: {type: string, format: uuid}
+                  risk_score: {type: integer, minimum: 0, maximum: 100}
+                  risk_level: {type: string, enum: [low, medium, high]}
+                  flags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: {type: string}
+                        points: {type: integer}
+                        description: {type: string}
+                  action: {type: string, enum: [none, send_to_review]}
+                  processing_ms: {type: number}
+                  target_ms: {type: integer}
+                  within_target: {type: boolean}
+                  checked_at: {type: string, format: date-time}
+                  check_id: {type: string, format: uuid}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /credit-applications/{applicationId}/reevaluations:
     parameters:
       - $ref: '#/components/parameters/ApplicationId'

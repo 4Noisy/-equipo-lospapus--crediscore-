@@ -14,7 +14,7 @@ Tres decisiones definen el producto, cada una con sus alternativas descartadas:
 2. **El LLM explica, no decide** ([ADR 0008](docs/adr/0008-feature-ia-explicador.md)): la decisión tiene que ser reproducible para la CMF. El LLM solo redacta, sin ver datos personales, y con una plantilla de respaldo.
 3. **Degradar con elegancia y decir dónde perdemos datos** ([ADR 0009](docs/adr/0009-resiliencia-degradacion.md)): si el LLM cae, la API sigue respondiendo (medido en el game day). El estado en memoria es nuestro mayor riesgo y está declarado, medido y en la primera fila del [roadmap](docs/defensa/roadmap.md).
 
-**Defensa final (S18):** [guion](docs/defensa/guion-pitch.md) · [evidencia por criterio de la rúbrica](docs/defensa/evidencia-rubrica.md) · [Q&A](docs/defensa/qa-panel.md).
+**Defensa final (S18):** [slides](docs/defensa/presentacion.html) · [guion](docs/defensa/guion-pitch.md) · [evidencia por criterio de la rúbrica](docs/defensa/evidencia-rubrica.md) · [Q&A](docs/defensa/qa-panel.md).
 
 ---
 
@@ -100,6 +100,24 @@ Cada PR corre `security.yml`: **sast** (Semgrep), **sca** (Trivy + SBOM CycloneD
 | Kyverno | No hay excepciones: una imagen sin firma del CI de `main` no entra | Si hace falta una imagen externa, se agrega su firma a la policy por PR |
 
 **4. VEX formal.** Si el cliente o un auditor pide la declaración en formato estándar, la excepción de Trivy se escribe como documento OpenVEX y se pasa a Trivy con `--vex`. El SBOM CycloneDX del run (artefacto `sbom-cyclonedx`) sirve para revisar si un CVE nuevo nos afecta, incluso en dependencias transitivas.
+
+---
+
+### MVP en 1 comando (demo visual)
+
+**Demo en línea, sin instalar nada:** https://4noisy.github.io/-equipo-lospapus--crediscore-/ (la API corre simulada en el navegador con la misma lógica del servidor; con `?api=https://tu-servidor` usa un backend real).
+
+Abre **http://localhost:8080**: panel con el recorrido de cada solicitud (recibida → identidad → antifraude → decisión → explicación), medidor de latencia contra las metas de 500 ms y 60 s, puntaje, explicación IA, idempotencia, registro en vivo, salud del sistema y recorrido guiado.
+
+| Dónde | Comando |
+| :--- | :--- |
+| Docker (cualquier SO) | `docker compose up --build` |
+| Windows | `.
+un.ps1` |
+| Linux / macOS | `./run.sh` |
+| Python a mano | `pip install -r requirements.txt && python -m src.main` |
+
+El antifraude del MVP es simulado (reglas en `src/fraud.py`, endpoint `GET /v1/credit-applications/{id}/fraud-check`): con riesgo alto, la decisión pasa a revisión humana.
 
 ---
 
